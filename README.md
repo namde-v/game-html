@@ -21,3 +21,4 @@ Open any file in a browser. Each game is a single HTML document and runs fully o
 | Amber Lattice | [games/game-006-amber-lattice.html](games/game-006-amber-lattice.html) | Hex orb shooter. Aim with the mouse, a drag, or A/D and the arrow keys. Click, release the drag, or Space to fire. Match three or more of a color; anything that loses the ceiling falls. The trellis lowers as you shoot and if you wait. P or Esc pauses, M mutes, R restarts. Three lanterns. |
 | Keepsake Atelier | [games/game-006-keepsake-atelier.html](games/game-006-keepsake-atelier.html) | - Peek, then flip pairs across growing galleries (up to 6×6, then tighter candles). |
 | Nightharrow | [games/game-006-nightharrow.html](games/game-006-nightharrow.html) | Add Nightharrow, an offline canal shooter |
+| Tideglass | [games/game-006-tideglass.html](games/game-006-tideglass.html) | Add Tideglass, an offline moon-pool seam game |
