@@ -17,3 +17,4 @@ Open any file in a browser. Each game is a single HTML document and runs fully o
 | Auric Well | [games/game-004-auric-well.html](games/game-004-auric-well.html) | Auric Well — an offline forge puzzle. Slide embers, fuse matches, and reach 2048. |
 | Mirage Volley | [games/game-004-mirage-volley.html](games/game-004-mirage-volley.html) | Table-tennis duel. Move with arrows, W/S, the mouse, or a finger drag. Space, J, Shift, double-tap, or the Smash button arms your next return. Thread the paddle edge, collect shards, and chain rallies. P or Esc pauses, M mutes, R restarts. |
 | Lumenwing | [games/game-006-lumenwing.html](games/game-006-lumenwing.html) | Dusk-canyon flyer. Space, W, Up, K, click, or tap to flap. Thread lantern gates, skim them for a gild, and collect wisps. Three wings. P or Esc pauses, M mutes, R restarts. |
+| Vesper Belt | [games/game-006-vesper-belt.html](games/game-006-vesper-belt.html) | Add Vesper Belt, an offline asteroid mining game |
