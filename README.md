@@ -22,3 +22,4 @@ Open any file in a browser. Each game is a single HTML document and runs fully o
 | Keepsake Atelier | [games/game-006-keepsake-atelier.html](games/game-006-keepsake-atelier.html) | - Peek, then flip pairs across growing galleries (up to 6×6, then tighter candles). |
 | Nightharrow | [games/game-006-nightharrow.html](games/game-006-nightharrow.html) | Add Nightharrow, an offline canal shooter |
 | Tideglass | [games/game-006-tideglass.html](games/game-006-tideglass.html) | Add Tideglass, an offline moon-pool seam game |
+| Glass Vespers | [games/game-006-glass-vespers.html](games/game-006-glass-vespers.html) | Stained-glass marble coil. Aim with the mouse, a drag, or A/D and the arrow keys. Click, release, Space, J, or Enter fires. E, K, or Swap exchanges the loaded pane. Match three touching panes of the same color before the coil reaches the reliquary. P or Esc pauses, M mutes, R restarts from pause or the ending. |
