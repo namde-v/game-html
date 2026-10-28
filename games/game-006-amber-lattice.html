@@ -1,0 +1,2041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#120a16">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src 'none'; media-src 'none';">
+<title>Amber Lattice</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='%23ffb03a'/%3E%3Ccircle cx='12' cy='12' r='4' fill='%23fff6e0'/%3E%3C/svg%3E">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #120a16;
+    --ink: #fff4e8;
+    --dim: #d8c2b2;
+    --amber: #ffb03a;
+    --rose: #ff6b8a;
+    --line: rgba(255, 196, 140, 0.38);
+    --font: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font);
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+  button, kbd { font-family: inherit; }
+  button { -webkit-tap-highlight-color: transparent; }
+  button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+  #app {
+    height: 100%;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    padding:
+      env(safe-area-inset-top)
+      env(safe-area-inset-right)
+      env(safe-area-inset-bottom)
+      env(safe-area-inset-left);
+  }
+  #hud {
+    height: 62px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 12px;
+    background: linear-gradient(180deg, #3a2218, #160c14);
+    border-bottom: 1px solid rgba(255, 176, 58, 0.22);
+    z-index: 3;
+  }
+  .stat { display: flex; flex-direction: column; min-width: 0; line-height: 1.05; }
+  .stat b {
+    display: inline-block;
+    font-size: 18px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+  }
+  .lbl {
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  #levelStat b, #dropStat.hot b { color: var(--amber); }
+  #dropStat.hot b { color: var(--rose); text-shadow: 0 0 10px rgba(255, 107, 138, 0.8); }
+  #score.hot { color: var(--amber); text-shadow: 0 0 12px rgba(255, 176, 58, 0.85); }
+  #combo {
+    min-width: 36px;
+    text-align: center;
+    font-weight: 800;
+    color: var(--amber);
+    text-shadow: 0 0 12px rgba(255, 176, 58, 0.7);
+  }
+  .lives { display: flex; gap: 3px; align-items: center; }
+  .lives svg { width: 18px; height: 18px; display: block; }
+  .lives .on { color: var(--amber); filter: drop-shadow(0 0 4px #ffb03a); }
+  .lives .off { color: rgba(255, 176, 58, 0.25); }
+  .lives .low { animation: pulse 0.7s ease-in-out infinite; }
+  .spacer { flex: 1; min-width: 4px; }
+  .hudbtn {
+    min-height: 36px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: rgba(0, 0, 0, 0.28);
+    color: var(--ink);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+  }
+  .hudbtn:hover, .hudbtn:focus-visible { background: rgba(255, 176, 58, 0.16); }
+  .hudbtn:disabled { opacity: 0.4; cursor: default; }
+  #stage { position: relative; flex: 1; min-height: 0; }
+  canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
+  }
+  #touch {
+    display: none;
+    flex: none;
+    gap: 8px;
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    background: #140910;
+    border-top: 1px solid rgba(255, 176, 58, 0.16);
+  }
+  body.touch #touch { display: flex; }
+  #touch button {
+    flex: 1;
+    min-height: 52px;
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    background: rgba(42, 22, 28, 0.92);
+    color: var(--ink);
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    box-shadow: inset 0 0 16px rgba(255, 176, 58, 0.08);
+    touch-action: none;
+  }
+  #touch button:active { background: rgba(255, 176, 58, 0.28); transform: translateY(1px); }
+  #t-fire { flex: 1.3; color: #2a1208; background: linear-gradient(180deg, #ffd27a, #e07a22); }
+  .overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    align-items: center;
+    justify-content: center;
+    background: rgba(8, 4, 10, 0.62);
+    padding: 16px;
+  }
+  .overlay.show { display: flex; }
+  .card {
+    width: min(460px, 100%);
+    max-height: 100%;
+    overflow: auto;
+    padding: 22px 20px 16px;
+    border-radius: 22px;
+    text-align: center;
+    background:
+      radial-gradient(120% 80% at 50% 0%, rgba(255, 176, 58, 0.16), transparent 55%),
+      linear-gradient(180deg, rgba(48, 26, 32, 0.96), rgba(16, 8, 16, 0.96));
+    border: 1px solid var(--line);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45), inset 0 0 28px rgba(255, 176, 58, 0.06);
+  }
+  .eyebrow {
+    margin: 0 0 6px;
+    letter-spacing: 0.22em;
+    font-size: 11px;
+    color: var(--amber);
+  }
+  h1 {
+    margin: 0;
+    font-size: 40px;
+    line-height: 0.95;
+    letter-spacing: 0.08em;
+  }
+  h1 span { color: var(--amber); text-shadow: 0 0 18px rgba(255, 176, 58, 0.45); }
+  h2 { margin: 0; letter-spacing: 0.14em; font-size: 28px; }
+  .tag, .note, .bestline { color: var(--dim); }
+  .tag { margin: 10px 0 0; }
+  .bestline { margin: 8px 0 14px; }
+  .bestline strong, .scorebig { color: var(--ink); }
+  .scorebig {
+    margin: 8px 0 0;
+    font-size: 42px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 18px rgba(255, 176, 58, 0.4);
+  }
+  .newbest {
+    display: inline-block;
+    margin: 10px 0 0;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(255, 176, 58, 0.16);
+    color: var(--amber);
+    font-weight: 800;
+    letter-spacing: 0.14em;
+  }
+  .newbest[hidden] { display: none; }
+  .row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 4px 0 8px; }
+  .primary, .ghost {
+    min-height: 44px;
+    padding: 0 18px;
+    border-radius: 999px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+  }
+  .primary {
+    border: none;
+    color: #2a1208;
+    background: linear-gradient(180deg, #ffd27a, #e07a22);
+    box-shadow: 0 8px 20px rgba(224, 122, 34, 0.35);
+  }
+  .ghost {
+    border: 1px solid var(--line);
+    color: var(--ink);
+    background: rgba(0, 0, 0, 0.25);
+  }
+  .help {
+    margin-top: 8px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 12px;
+    text-align: left;
+    font-size: 13px;
+    color: var(--dim);
+  }
+  .help p { margin: 0; }
+  .help b { color: var(--ink); }
+  kbd {
+    display: inline-block;
+    min-width: 1.2em;
+    padding: 0 5px;
+    border-radius: 5px;
+    border: 1px solid rgba(255, 220, 190, 0.28);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--ink);
+    font-size: 12px;
+  }
+  #selftest {
+    display: none;
+    margin: 0;
+    padding: 10px;
+    white-space: pre-wrap;
+    color: #d6ffd8;
+    background: #06140c;
+  }
+  body.selftest #selftest { display: block; position: absolute; z-index: 9; inset: auto 8px 8px 8px; max-height: 40%; overflow: auto; }
+  @keyframes pulse { 50% { transform: scale(1.16); } }
+  @media (prefers-reduced-motion: reduce) {
+    .lives .low { animation: none; }
+  }
+  @media (max-width: 720px) {
+    .help { grid-template-columns: 1fr; }
+    h1 { font-size: 32px; }
+    h2 { font-size: 22px; }
+    .hudbtn { padding: 0 10px; }
+  }
+  @media (max-width: 420px) {
+    .stat b { font-size: 15px; }
+    #bestWrap { display: none; }
+    #hud { gap: 8px; padding: 0 8px; }
+    .lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="hud">
+    <div class="stat" aria-label="Score"><span class="lbl">Score</span><b id="score">0</b></div>
+    <div class="stat" id="bestWrap" aria-label="Best score"><span class="lbl">Best</span><b id="best">0</b></div>
+    <div class="stat" id="levelStat" aria-label="Level"><span class="lbl">Dusk</span><b id="level">1</b></div>
+    <div class="stat" id="dropStat" aria-label="Shots until the trellis drops"><span class="lbl">Drop</span><b id="drop">8</b></div>
+    <div id="combo" aria-label="Combo"></div>
+    <div id="lives" class="lives" aria-label="Lanterns"></div>
+    <div class="spacer"></div>
+    <button id="btn-mute" class="hudbtn" type="button" aria-label="Mute sound" aria-pressed="false">SFX</button>
+    <button id="btn-pause" class="hudbtn" type="button" aria-label="Pause" disabled>Pause</button>
+  </header>
+  <div id="stage">
+    <canvas id="c" width="480" height="800" aria-hidden="true"></canvas>
+    <div id="title" class="overlay show">
+      <div class="card">
+        <p class="eyebrow">OFFLINE ARCADE</p>
+        <h1>AMBER <span>LATTICE</span></h1>
+        <p class="tag">Fire sap-orbs into the hanging trellis. Bloom three of a kind before the glass reaches your lanterns.</p>
+        <p class="bestline">Best <strong id="title-best">0</strong></p>
+        <div class="row">
+          <button id="btn-start" class="primary" type="button">Start game</button>
+        </div>
+        <div class="help">
+          <p><b>Aim</b> Mouse, drag, <kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd></p>
+          <p><b>Fire</b> Click, release a drag, or <kbd>Space</kbd></p>
+          <p><b>Match</b> Land on three or more of the same color. They bloom, and anything no longer tied to the ceiling falls.</p>
+          <p><b>Drop</b> The trellis lowers after several shots, and also if you wait too long. The bar by the cradle is that wait.</p>
+          <p><b>Lanterns</b> Three lives. When the trellis crosses the line, a lantern goes out and the lowest rows are cut away.</p>
+          <p><b>Queue</b> The cradle holds the next orb. A smaller orb to the right is the one after.</p>
+          <p><b>Pause</b> <kbd>P</kbd> or <kbd>Esc</kbd>. Focus loss, hiding the tab, and resizing pause too.</p>
+          <p><b>Mute</b> <kbd>M</kbd> or SFX. <b>Restart</b> <kbd>R</kbd> any time. <kbd>Enter</kbd> starts, resumes, or plays again.</p>
+          <p><b>Touch</b> Drag on the glass to aim and release to fire. The buttons below nudge the aim or fire.</p>
+          <p><b>Score</b> Bigger blooms and falling clusters score more, and consecutive blooms raise a combo up to ×8. Clearing a lattice banks a dusk bonus. Best score is kept on this device.</p>
+        </div>
+      </div>
+    </div>
+    <div id="pause" class="overlay">
+      <div class="card">
+        <p class="eyebrow">HOLD</p>
+        <h2>PAUSED</h2>
+        <p class="note" id="pause-note">The trellis waits.</p>
+        <div class="row">
+          <button id="btn-resume" class="primary" type="button">Resume</button>
+          <button id="btn-restart" class="ghost" type="button">Restart</button>
+        </div>
+        <div class="help">
+          <p><b>Aim</b> Mouse, drag, <kbd>←</kbd> <kbd>→</kbd> <kbd>A</kbd> <kbd>D</kbd></p>
+          <p><b>Fire</b> Click, release, <kbd>Space</kbd></p>
+          <p><b>Pause</b> <kbd>P</kbd> / <kbd>Esc</kbd></p>
+          <p><b>Mute</b> <kbd>M</kbd> · <b>Restart</b> <kbd>R</kbd></p>
+        </div>
+      </div>
+    </div>
+    <div id="over" class="overlay">
+      <div class="card">
+        <p class="eyebrow">THE GLASS CAME DOWN</p>
+        <h2>GAME OVER</h2>
+        <p id="new-best" class="newbest" hidden>NEW BEST</p>
+        <p class="scorebig" id="final-score">0</p>
+        <p class="bestline">Best <strong id="final-best">0</strong></p>
+        <p class="note" id="over-meta">Dusk 1</p>
+        <div class="row">
+          <button id="btn-again" class="primary" type="button">Play again</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="touch">
+    <button id="t-left" type="button" tabindex="-1" aria-label="Aim left">◀</button>
+    <button id="t-fire" type="button" tabindex="-1" aria-label="Fire">Fire</button>
+    <button id="t-right" type="button" tabindex="-1" aria-label="Aim right">▶</button>
+  </div>
+</div>
+<pre id="selftest"></pre>
+<script>
+'use strict';
+(function () {
+  const VW = 480;
+  const VH = 800;
+  const COLS = 8;
+  const boardLeft = 22;
+  const boardRight = VW - 22;
+  const boardWidth = boardRight - boardLeft;
+  const diameter = boardWidth / (COLS + 0.5);
+  const R = diameter / 2;
+  const rowH = Math.sqrt(3) * R;
+  const ceilingY = 18;
+  const shooter = { x: (boardLeft + boardRight) / 2, y: VH - 86 };
+  const dangerY = shooter.y - R * 3.15;
+  const SPEED = 820;
+  const AIM_MIN = -Math.PI + 0.16;
+  const AIM_MAX = -0.16;
+  const HIT_R = diameter * 1.002;
+  const BEST_KEY = 'amber-lattice-best';
+  const MUTE_KEY = 'amber-lattice-mute';
+  const LEVEL_NAMES = [
+    'FIRST BLOOM', 'GLASSHOUSE', 'AMBER CANOPY', 'NIGHT ORCHARD', 'VELVET TRELLIS',
+    'GILDED HIVE', 'DEEP BLOOM', 'STAR LATTICE', 'MOON VINE', 'ECLIPSE ORCHARD'
+  ];
+  const PALETTE = [
+    { core: '#fff1c4', mid: '#ffb03a', edge: '#c45a12', ink: '#6a2c08' },
+    { core: '#ffd5e4', mid: '#ff6b9a', edge: '#9c234f', ink: '#5c1028' },
+    { core: '#d9fff8', mid: '#3ee0c5', edge: '#0c7d78', ink: '#063c38' },
+    { core: '#f3dcff', mid: '#c07bff', edge: '#6428b0', ink: '#35145c' },
+    { core: '#fff6c4', mid: '#ffe14a', edge: '#b8860b', ink: '#5c4304' },
+    { core: '#e5ecff', mid: '#7aa2ff', edge: '#2a3f9e', ink: '#152056' }
+  ];
+  const LANTERN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2c2 4 6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 4-7 6-11z"/></svg>';
+
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const stage = document.getElementById('stage');
+  const scoreEl = document.getElementById('score');
+  const bestEl = document.getElementById('best');
+  const levelEl = document.getElementById('level');
+  const dropEl = document.getElementById('drop');
+  const dropStat = document.getElementById('dropStat');
+  const comboEl = document.getElementById('combo');
+  const livesEl = document.getElementById('lives');
+  const muteBtn = document.getElementById('btn-mute');
+  const pauseBtn = document.getElementById('btn-pause');
+  const titleEl = document.getElementById('title');
+  const pauseEl = document.getElementById('pause');
+  const overEl = document.getElementById('over');
+  const pauseNote = document.getElementById('pause-note');
+  const titleBest = document.getElementById('title-best');
+  const finalScore = document.getElementById('final-score');
+  const finalBest = document.getElementById('final-best');
+  const newBestEl = document.getElementById('new-best');
+  const overMeta = document.getElementById('over-meta');
+  const selftestEl = document.getElementById('selftest');
+
+  const grid = new Map();
+  const born = new Map();
+  const keys = new Set();
+  const particles = [];
+  const falling = [];
+  const rings = [];
+  const floaters = [];
+  const attract = [];
+
+  let state = 'title';
+  let stateBefore = 'playing';
+  let level = 1;
+  let score = 0;
+  let best = 0;
+  let bestAtRunStart = 0;
+  let lives = 3;
+  let combo = 0;
+  let colorsN = 3;
+  let dropEvery = 8;
+  let shotsSinceDrop = 0;
+  let topRow = 0;
+  let patternPhase = 0;
+  let idle = 0;
+  let idleLimit = 10.5;
+  let aim = -Math.PI / 2;
+  let chamber = 0;
+  let preview = 1;
+  let ball = null;
+  let announce = null;
+  let clearLeft = 0;
+  let shake = 0;
+  let flashA = 0;
+  let flashColor = '#fff4e4';
+  let muted = false;
+  let testing = false;
+  let audioCtx = null;
+  let master = null;
+  let noiseBuf = null;
+  let lastTs = 0;
+  let viewW = 1;
+  let viewH = 1;
+  let dpr = 1;
+  let worldScale = 1;
+  let offsetX = 0;
+  let offsetY = 0;
+  let fittedOnce = false;
+  let activePointer = null;
+  const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const dust = [];
+  for (let i = 0; i < 36; i++) {
+    dust.push({
+      x: Math.random() * VW,
+      y: Math.random() * VH,
+      r: 0.6 + Math.random() * 1.6,
+      s: 8 + Math.random() * 18,
+      a: 0.15 + Math.random() * 0.35,
+      p: Math.random() * Math.PI * 2
+    });
+  }
+  for (let r = 0; r < 7; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (r > 4 && ((c + r) % 4 === 0)) continue;
+      attract.push({ c: c, r: r, color: (c * 2 + r) % PALETTE.length, phase: Math.random() * 6 });
+    }
+  }
+
+  try {
+    const stored = parseInt(localStorage.getItem(BEST_KEY), 10);
+    if (Number.isFinite(stored) && stored > 0) best = stored;
+    muted = localStorage.getItem(MUTE_KEY) === '1';
+  } catch (err) { /* private mode */ }
+
+  function fmt(n) {
+    return String(Math.max(0, Math.floor(n))).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+  function levelName(lv) {
+    return LEVEL_NAMES[(lv - 1) % LEVEL_NAMES.length];
+  }
+  function levelParams(lv) {
+    return {
+      colors: Math.min(PALETTE.length, 3 + Math.floor((lv - 1) / 2)),
+      rows: Math.min(9, 6 + Math.floor((lv - 1) / 2)),
+      dropEvery: Math.max(5, 8 - Math.floor((lv - 1) / 3)),
+      idleLimit: Math.max(6.2, 10.5 - (lv - 1) * 0.28)
+    };
+  }
+  function key(c, r) { return c + ',' + r; }
+  function get(c, r) { return grid.get(key(c, r)); }
+  function setCell(c, r, color) { grid.set(key(c, r), { c: c, r: r, color: color }); }
+  function visualIndex(r, offset) {
+    return r - topRow + (offset || 0);
+  }
+  function cellCenter(c, r) {
+    const x = (r & 1) === 0
+      ? boardLeft + R + c * diameter
+      : boardLeft + diameter + c * diameter;
+    const y = ceilingY + R + visualIndex(r, 0) * rowH;
+    return { x: x, y: y };
+  }
+  function cellBottom(r, offset) {
+    return ceilingY + diameter + visualIndex(r, offset) * rowH;
+  }
+  // Even rows sit flush left; odd rows shift by one radius. Neighbors are the
+  // six cells whose centers are exactly one diameter away.
+  function neighbors(c, r) {
+    const deltas = (r & 1) === 0
+      ? [[-1, 0], [1, 0], [-1, -1], [0, -1], [-1, 1], [0, 1]]
+      : [[-1, 0], [1, 0], [0, -1], [1, -1], [0, 1], [1, 1]];
+    const out = [];
+    for (let i = 0; i < deltas.length; i++) {
+      const cc = c + deltas[i][0];
+      const rr = r + deltas[i][1];
+      if (cc < 0 || cc >= COLS) continue;
+      out.push({ c: cc, r: rr });
+    }
+    return out;
+  }
+  function collectGroup(c, r) {
+    const start = get(c, r);
+    if (!start) return [];
+    const color = start.color;
+    const out = [];
+    const seen = new Set();
+    const stack = [{ c: c, r: r }];
+    seen.add(key(c, r));
+    while (stack.length) {
+      const cur = stack.pop();
+      const cell = get(cur.c, cur.r);
+      if (!cell || cell.color !== color) continue;
+      out.push(cell);
+      const ns = neighbors(cur.c, cur.r);
+      for (let i = 0; i < ns.length; i++) {
+        const k = key(ns[i].c, ns[i].r);
+        if (seen.has(k)) continue;
+        const next = get(ns[i].c, ns[i].r);
+        if (!next || next.color !== color) continue;
+        seen.add(k);
+        stack.push(ns[i]);
+      }
+    }
+    return out;
+  }
+  function anchoredSet() {
+    const seen = new Set();
+    const stack = [];
+    for (let c = 0; c < COLS; c++) {
+      if (get(c, topRow)) {
+        seen.add(key(c, topRow));
+        stack.push({ c: c, r: topRow });
+      }
+    }
+    while (stack.length) {
+      const cur = stack.pop();
+      const ns = neighbors(cur.c, cur.r);
+      for (let i = 0; i < ns.length; i++) {
+        const k = key(ns[i].c, ns[i].r);
+        if (seen.has(k) || !get(ns[i].c, ns[i].r)) continue;
+        seen.add(k);
+        stack.push(ns[i]);
+      }
+    }
+    return seen;
+  }
+  function findOrphans() {
+    const keep = anchoredSet();
+    const out = [];
+    for (const cell of grid.values()) {
+      if (!keep.has(key(cell.c, cell.r))) out.push(cell);
+    }
+    return out;
+  }
+  function overLineAt(offset) {
+    for (const cell of grid.values()) {
+      if (cellBottom(cell.r, offset) > dangerY) return true;
+    }
+    return false;
+  }
+  function anchorable(c, r) {
+    if (r === topRow) return true;
+    const ns = neighbors(c, r);
+    for (let i = 0; i < ns.length; i++) {
+      if (get(ns[i].c, ns[i].r)) return true;
+    }
+    return false;
+  }
+  // Hex lattices are 3-colorable. (q + 2*row + phase) mod N never matches a neighbor
+  // for N >= 3, including rows above the current ceiling, so a drop cannot
+  // manufacture a bloom.
+  function patternColor(c, r) {
+    const parity = r & 1;
+    const q = c - Math.floor((r - parity) / 2);
+    return ((q + 2 * r + patternPhase) % colorsN + colorsN) % colorsN;
+  }
+  function buildBoard(rows) {
+    grid.clear();
+    born.clear();
+    topRow = 0;
+    patternPhase = Math.floor(Math.random() * colorsN);
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (r >= rows - 2 && ((c * 3 + r) % 5 === 0)) continue;
+        setCell(c, r, patternColor(c, r));
+      }
+    }
+    const orphans = findOrphans();
+    for (let i = 0; i < orphans.length; i++) grid.delete(key(orphans[i].c, orphans[i].r));
+  }
+  function addCeilingRow() {
+    const newR = topRow - 1;
+    for (let c = 0; c < COLS; c++) setCell(c, newR, patternColor(c, newR));
+    topRow = newR;
+  }
+  function resolveNewRow() {
+    const groups = [];
+    const seen = new Set();
+    for (let c = 0; c < COLS; c++) {
+      if (!get(c, topRow)) continue;
+      const g = collectGroup(c, topRow);
+      if (g.length < 3) continue;
+      const id = g.map(function (cell) { return key(cell.c, cell.r); }).sort().join('|');
+      if (seen.has(id)) continue;
+      seen.add(id);
+      groups.push(g);
+    }
+    let gained = 0;
+    for (let i = 0; i < groups.length; i++) {
+      const g = groups[i].filter(function (cell) { return grid.has(key(cell.c, cell.r)); });
+      if (g.length < 3) continue;
+      gained += g.length * g.length * 12;
+      const center = centroid(g);
+      destroyGroup(g, 'pop');
+      floaterAt(center, 'BLOOM', '#fff6e0');
+    }
+    const orphans = findOrphans();
+    if (orphans.length) {
+      gained += orphans.length * 45;
+      destroyGroup(orphans, 'fall');
+    }
+    if (gained > 0) {
+      addScore(gained);
+      shake = Math.max(shake, 0.35);
+    }
+    return gained;
+  }
+  function colorsPresent() {
+    const set = new Set();
+    for (const cell of grid.values()) set.add(cell.color);
+    return set;
+  }
+  function pickFrom(set) {
+    const arr = [...set];
+    if (!arr.length) return Math.floor(Math.random() * colorsN);
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+  function ensureQueue() {
+    const present = colorsPresent();
+    if (!present.size) return;
+    if (!present.has(chamber)) chamber = present.has(preview) ? preview : pickFrom(present);
+    if (!present.has(preview)) preview = pickFrom(present);
+  }
+  function segmentHitCircle(x0, y0, x1, y1, cx, cy, rad) {
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const fx = x0 - cx;
+    const fy = y0 - cy;
+    const c0 = fx * fx + fy * fy - rad * rad;
+    if (c0 <= 0) return { t: 0, x: x0, y: y0 };
+    const a = dx * dx + dy * dy;
+    if (a < 1e-8) return null;
+    const b = 2 * (fx * dx + fy * dy);
+    const disc = b * b - 4 * a * c0;
+    if (disc < 0) return null;
+    const t = (-b - Math.sqrt(disc)) / (2 * a);
+    if (t < 0 || t > 1) return null;
+    return { t: t, x: x0 + dx * t, y: y0 + dy * t };
+  }
+  function tracePath(angle) {
+    const points = [{ x: shooter.x, y: shooter.y }];
+    let x = shooter.x;
+    let y = shooter.y;
+    let vx = Math.cos(angle);
+    let vy = Math.sin(angle);
+    const mag = Math.hypot(vx, vy) || 1;
+    vx /= mag;
+    vy /= mag;
+    const minX = boardLeft + R;
+    const maxX = boardRight - R;
+    const ceil = ceilingY + R;
+    const cells = [...grid.values()];
+    const centers = cells.map(function (cell) { return cellCenter(cell.c, cell.r); });
+    let bubbleBand = ceil + HIT_R;
+    for (let i = 0; i < centers.length; i++) {
+      if (centers[i].y + HIT_R > bubbleBand) bubbleBand = centers[i].y + HIT_R;
+    }
+    let bounces = 0;
+    for (let guard = 0; guard < 900 && bounces < 40; guard++) {
+      if (x <= minX + 0.02) {
+        x = minX;
+        if (vx < 0) vx = Math.abs(vx);
+      }
+      if (x >= maxX - 0.02) {
+        x = maxX;
+        if (vx > 0) vx = -Math.abs(vx);
+      }
+      const step = 8;
+      const x1 = x + vx * step;
+      const y1 = y + vy * step;
+      let bestT = 1;
+      let kind = 'move';
+      let hx = x1;
+      let hy = y1;
+      if (vx < 0 && x > minX) {
+        const span = x - x1;
+        if (span > 0) {
+          const t = (x - minX) / span;
+          if (t >= 0 && t < bestT) {
+            bestT = t;
+            kind = 'left';
+            hx = minX;
+            hy = y + (y1 - y) * t;
+          }
+        }
+      } else if (vx > 0 && x < maxX) {
+        const span = x1 - x;
+        if (span > 0) {
+          const t = (maxX - x) / span;
+          if (t >= 0 && t < bestT) {
+            bestT = t;
+            kind = 'right';
+            hx = maxX;
+            hy = y + (y1 - y) * t;
+          }
+        }
+      }
+      if (vy < 0 && y > ceil) {
+        const span = y - y1;
+        if (span > 0) {
+          const t = (y - ceil) / span;
+          if (t >= 0 && t < bestT) {
+            bestT = t;
+            kind = 'ceil';
+            hx = x + (x1 - x) * t;
+            hy = ceil;
+          }
+        }
+      }
+      if (y <= bubbleBand + 8 || y1 <= bubbleBand + 8) {
+        for (let i = 0; i < centers.length; i++) {
+          const hit = segmentHitCircle(x, y, x1, y1, centers[i].x, centers[i].y, HIT_R);
+          if (hit && hit.t < bestT) {
+            bestT = hit.t;
+            kind = 'ball';
+            hx = hit.x;
+            hy = hit.y;
+          }
+        }
+      }
+      if (kind === 'move') {
+        points.push({ x: x1, y: y1 });
+        x = x1;
+        y = y1;
+        if (y > shooter.y + 30) break;
+        continue;
+      }
+      points.push({ x: hx, y: hy });
+      if (kind === 'left' || kind === 'right') {
+        x = hx;
+        y = hy;
+        vx = kind === 'left' ? Math.abs(vx) : -Math.abs(vx);
+        bounces++;
+        continue;
+      }
+      return { points: points, hit: { x: hx, y: hy } };
+    }
+    return { points: points, hit: null };
+  }
+  function pathMetric(points) {
+    const seg = [];
+    let total = 0;
+    for (let i = 1; i < points.length; i++) {
+      const len = Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
+      seg.push(len);
+      total += len;
+    }
+    return { seg: seg, total: total };
+  }
+  function pointAlong(points, seg, dist) {
+    let d = dist;
+    for (let i = 1; i < points.length; i++) {
+      const len = seg[i - 1];
+      if (d <= len || i === points.length - 1) {
+        const t = len <= 0.0001 ? 1 : Math.min(1, d / len);
+        return {
+          x: points[i - 1].x + (points[i].x - points[i - 1].x) * t,
+          y: points[i - 1].y + (points[i].y - points[i - 1].y) * t
+        };
+      }
+      d -= len;
+    }
+    const last = points[points.length - 1];
+    return { x: last.x, y: last.y };
+  }
+  function nearestLegalCell(x, y) {
+    let near = null;
+    let nearD = Infinity;
+    for (const cell of grid.values()) {
+      const p = cellCenter(cell.c, cell.r);
+      const d = (p.x - x) * (p.x - x) + (p.y - y) * (p.y - y);
+      if (d < nearD) {
+        nearD = d;
+        near = cell;
+      }
+    }
+    const prefer = new Set();
+    if (near) {
+      const ns = neighbors(near.c, near.r);
+      for (let i = 0; i < ns.length; i++) prefer.add(key(ns[i].c, ns[i].r));
+    }
+    const hitCeiling = !near || nearD > (diameter * 1.25) * (diameter * 1.25);
+    const approx = Math.round((y - ceilingY - R) / rowH) + topRow;
+    let best = null;
+    let bestD = Infinity;
+    for (let rr = approx - 2; rr <= approx + 3; rr++) {
+      for (let cc = 0; cc < COLS; cc++) {
+        if (get(cc, rr)) continue;
+        if (cellBottom(rr) > dangerY) continue;
+        const ceilingSlot = rr === topRow && hitCeiling;
+        if (!prefer.has(key(cc, rr)) && !ceilingSlot) continue;
+        if (!anchorable(cc, rr)) continue;
+        const p = cellCenter(cc, rr);
+        const d = (p.x - x) * (p.x - x) + (p.y - y) * (p.y - y);
+        if (d < bestD) {
+          bestD = d;
+          best = { c: cc, r: rr };
+        }
+      }
+    }
+    if (!best || bestD > (R * 3.3) * (R * 3.3)) return null;
+    return best;
+  }
+  function visitTemp(c, r, color, fn) {
+    const k = key(c, r);
+    const prev = grid.get(k);
+    grid.set(k, { c: c, r: r, color: color });
+    try { return fn(); }
+    finally {
+      if (prev) grid.set(k, prev);
+      else grid.delete(k);
+    }
+  }
+
+  function saveBest() {
+    if (testing) return;
+    try { localStorage.setItem(BEST_KEY, String(best)); } catch (err) { /* ignore */ }
+  }
+  function saveMute() {
+    if (testing) return;
+    try { localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); } catch (err) { /* ignore */ }
+  }
+  function addScore(n) {
+    const gain = Math.round(n);
+    if (gain <= 0) return;
+    score += gain;
+    if (score > best) {
+      best = score;
+      saveBest();
+    }
+    updateHud();
+  }
+  function updateHud() {
+    scoreEl.textContent = fmt(score);
+    bestEl.textContent = fmt(best);
+    titleBest.textContent = fmt(best);
+    levelEl.textContent = String(level);
+    const left = Math.max(0, dropEvery - shotsSinceDrop);
+    dropEl.textContent = String(left);
+    const urgent = left <= 1 || (idleLimit > 0 && idle / idleLimit > 0.72);
+    dropStat.classList.toggle('hot', urgent);
+    scoreEl.classList.toggle('hot', combo >= 3);
+    comboEl.textContent = combo >= 2 ? '×' + combo : '';
+    let html = '';
+    for (let i = 0; i < 3; i++) {
+      const on = i < lives;
+      html += '<span class="' + (on ? 'on' : 'off') + (on && lives === 1 ? ' low' : '') + '">' + LANTERN + '</span>';
+    }
+    livesEl.innerHTML = html;
+    livesEl.setAttribute('aria-label', lives + (lives === 1 ? ' lantern' : ' lanterns'));
+    pauseBtn.disabled = !(state === 'playing' || state === 'clear' || state === 'paused');
+    pauseBtn.textContent = state === 'paused' ? 'Resume' : 'Pause';
+    muteBtn.textContent = muted ? 'MUTED' : 'SFX';
+    muteBtn.setAttribute('aria-pressed', muted ? 'true' : 'false');
+  }
+  function showOverlay(which) {
+    titleEl.classList.toggle('show', which === 'title');
+    pauseEl.classList.toggle('show', which === 'pause');
+    overEl.classList.toggle('show', which === 'over');
+  }
+  function startLevel() {
+    const params = levelParams(level);
+    colorsN = params.colors;
+    dropEvery = params.dropEvery;
+    idleLimit = params.idleLimit;
+    shotsSinceDrop = 0;
+    idle = 0;
+    ball = null;
+    buildBoard(params.rows);
+    const present = colorsPresent();
+    chamber = pickFrom(present);
+    preview = pickFrom(present);
+  }
+  function startGame() {
+    score = 0;
+    lives = 3;
+    level = 1;
+    combo = 0;
+    bestAtRunStart = best;
+    particles.length = 0;
+    falling.length = 0;
+    rings.length = 0;
+    floaters.length = 0;
+    announce = null;
+    flashA = 0;
+    shake = 0;
+    aim = -Math.PI / 2;
+    keys.clear();
+    startLevel();
+    state = 'playing';
+    showOverlay(null);
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    announce = { text: levelName(1), sub: 'DUSK 1', life: 1.4 };
+    updateHud();
+    unlockAudio();
+    sfxStart();
+  }
+  function beginNextLevel() {
+    level += 1;
+    combo = 0;
+    startLevel();
+    state = 'playing';
+    announce = { text: levelName(level), sub: 'DUSK ' + level, life: 1.4 };
+    sfxStart();
+    updateHud();
+  }
+  function levelClear() {
+    const bonus = 900 * level + lives * 250;
+    state = 'clear';
+    clearLeft = 1.7;
+    ball = null;
+    announce = { text: 'LATTICE CLEARED', sub: '+' + fmt(bonus), life: 1.7 };
+    shake = Math.min(1, shake + 0.45);
+    flashA = Math.max(flashA, 0.22);
+    flashColor = '#fff1c4';
+    for (let i = 0; i < 28; i++) {
+      burst(boardLeft + Math.random() * boardWidth, ceilingY + 40 + Math.random() * 180, i % colorsN, 1);
+    }
+    sfxClear();
+    addScore(bonus);
+  }
+  function gameOver() {
+    state = 'over';
+    ball = null;
+    keys.clear();
+    const fresh = score > bestAtRunStart && score > 0;
+    newBestEl.hidden = !fresh;
+    finalScore.textContent = fmt(score);
+    finalBest.textContent = fmt(best);
+    overMeta.textContent = 'Dusk ' + level + ' · ' + levelName(level);
+    showOverlay('over');
+    sfxOver();
+    updateHud();
+  }
+  function pauseGame(reason) {
+    if (state !== 'playing' && state !== 'clear') return;
+    stateBefore = state;
+    state = 'paused';
+    keys.clear();
+    activePointer = null;
+    shake = 0;
+    flashA = 0;
+    if (reason === 'resize') pauseNote.textContent = 'Window resized — paused so the lattice can settle.';
+    else if (reason === 'blur' || reason === 'hidden') pauseNote.textContent = 'Focus lost — paused. The trellis will wait.';
+    else pauseNote.textContent = 'The trellis waits.';
+    showOverlay('pause');
+    updateHud();
+  }
+  function resumeGame() {
+    if (state !== 'paused') return;
+    state = stateBefore === 'clear' ? 'clear' : 'playing';
+    showOverlay(null);
+    lastTs = performance.now();
+    updateHud();
+  }
+  function togglePause() {
+    if (state === 'paused') resumeGame();
+    else pauseGame('manual');
+  }
+
+  function pushParticle(p) {
+    particles.push(p);
+    if (particles.length > 320) particles.splice(0, particles.length - 320);
+  }
+  function burst(x, y, color, n) {
+    const pal = PALETTE[color] || PALETTE[0];
+    const count = calm ? Math.max(3, Math.ceil(n * 0.45)) : n;
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const s = 30 + Math.random() * 210;
+      pushParticle({
+        x: x, y: y,
+        vx: Math.cos(a) * s,
+        vy: Math.sin(a) * s,
+        life: 0.28 + Math.random() * 0.38,
+        max: 0.66,
+        r: 1.4 + Math.random() * 2.6,
+        color: Math.random() < 0.28 ? '#fff6e4' : pal.mid,
+        g: 20 + Math.random() * 40
+      });
+    }
+    if (!calm) rings.push({ x: x, y: y, life: 0.32, max: 0.32, color: pal.mid });
+  }
+  function spawnFall(p, color) {
+    falling.push({
+      x: p.x, y: p.y,
+      vx: (Math.random() - 0.5) * 90,
+      vy: 30 + Math.random() * 50,
+      color: color,
+      life: 1.05,
+      spin: Math.random() * Math.PI
+    });
+  }
+  function destroyGroup(list, mode) {
+    const seen = new Set();
+    for (let i = 0; i < list.length; i++) {
+      const cell = list[i];
+      const k = key(cell.c, cell.r);
+      if (seen.has(k) || !grid.has(k)) continue;
+      seen.add(k);
+      const p = cellCenter(cell.c, cell.r);
+      grid.delete(k);
+      born.delete(k);
+      if (mode === 'fall') spawnFall(p, cell.color);
+      else burst(p.x, p.y, cell.color, 9);
+    }
+  }
+  function centroid(list) {
+    let x = 0;
+    let y = 0;
+    for (let i = 0; i < list.length; i++) {
+      const p = cellCenter(list[i].c, list[i].r);
+      x += p.x;
+      y += p.y;
+    }
+    return { x: x / list.length, y: y / list.length };
+  }
+  function floaterAt(pt, text, color) {
+    floaters.push({ x: pt.x, y: pt.y, text: text, life: 0.85, max: 0.85, color: color || '#fff6e0' });
+    if (floaters.length > 10) floaters.splice(0, floaters.length - 10);
+  }
+  function mercyClear() {
+    const uniq = [];
+    const seen = new Set();
+    for (const cell of grid.values()) {
+      if (!seen.has(cell.r)) {
+        seen.add(cell.r);
+        uniq.push(cell.r);
+      }
+    }
+    uniq.sort(function (a, b) { return b - a; });
+    const kill = new Set(uniq.slice(0, 2));
+    const doomed = [];
+    for (const cell of grid.values()) {
+      if (kill.has(cell.r) || cellBottom(cell.r) > dangerY) doomed.push(cell);
+    }
+    destroyGroup(doomed, 'fall');
+    addScore(doomed.length * 20);
+  }
+  function triggerDrop() {
+    if (state !== 'playing' || grid.size === 0) return;
+    addCeilingRow();
+    const bloomed = resolveNewRow();
+    shotsSinceDrop = 0;
+    idle = 0;
+    if (grid.size === 0) {
+      shake = 0.55;
+      levelClear();
+      return;
+    }
+    if (overLineAt(0)) {
+      lives -= 1;
+      flashA = 0.5;
+      flashColor = '#ff5a6e';
+      shake = 1;
+      if (lives <= 0) {
+        updateHud();
+        gameOver();
+        return;
+      }
+      sfxLife();
+      announce = { text: 'LANTERN LOST', sub: lives + ' left', life: 1.15 };
+      mercyClear();
+      if (grid.size === 0) {
+        levelClear();
+        return;
+      }
+    } else {
+      sfxDrop();
+      shake = Math.max(shake, bloomed ? 0.4 : 0.28);
+      if (!bloomed) announce = { text: 'TRELLIS LOWERS', sub: '', life: 0.75 };
+      burst(shooter.x, ceilingY + 10, 0, 6);
+    }
+    ensureQueue();
+    updateHud();
+  }
+  function registerShot() {
+    if (state !== 'playing' || grid.size === 0) return;
+    idle = 0;
+    shotsSinceDrop += 1;
+    if (shotsSinceDrop >= dropEvery) triggerDrop();
+    else updateHud();
+  }
+  function settle(c, r) {
+    const group = collectGroup(c, r);
+    if (group.length >= 3) {
+      combo = Math.min(8, combo + 1);
+      const center = centroid(group);
+      const popScore = group.length * group.length * 12;
+      destroyGroup(group, 'pop');
+      const orphans = findOrphans();
+      const fallScore = orphans.length * 45;
+      if (orphans.length) {
+        const fallCenter = centroid(orphans);
+        destroyGroup(orphans, 'fall');
+        if (orphans.length >= 6) burst(fallCenter.x, fallCenter.y, 4, 12);
+      }
+      const gained = (popScore + fallScore) * combo;
+      floaterAt(center, '+' + fmt(gained), '#fff6e0');
+      sfxPop(group.length);
+      shake = Math.min(1, 0.14 + group.length * 0.04 + orphans.length * 0.02);
+      flashA = Math.min(0.5, 0.08 + group.length * 0.025);
+      flashColor = '#fff4e4';
+      if (orphans.length >= 8) announce = { text: 'TRELLIS FALL', sub: '+' + fmt(gained), life: 1.05 };
+      else if (group.length >= 6) announce = { text: 'BLOOM', sub: '×' + combo, life: 0.9 };
+      addScore(gained);
+    } else {
+      combo = 0;
+      sfxStick();
+      shake = Math.max(shake, 0.07);
+    }
+    if (grid.size === 0) {
+      levelClear();
+      return;
+    }
+    ensureQueue();
+    registerShot();
+  }
+  function attachBall(x, y, color) {
+    const spot = nearestLegalCell(x, y);
+    if (!spot) {
+      burst(x, y, color, 12);
+      sfxFizzle();
+      combo = 0;
+      registerShot();
+      return;
+    }
+    setCell(spot.c, spot.r, color);
+    born.set(key(spot.c, spot.r), performance.now());
+    settle(spot.c, spot.r);
+  }
+  function tryShoot() {
+    if (state !== 'playing' || ball || grid.size === 0) return;
+    unlockAudio();
+    const traced = tracePath(aim);
+    const color = chamber;
+    const present = colorsPresent();
+    chamber = present.has(preview) ? preview : pickFrom(present);
+    preview = pickFrom(present);
+    const metric = pathMetric(traced.points);
+    const origin = traced.points[0];
+    const duration = Math.min(0.8, Math.max(0.2, metric.total / SPEED));
+    ball = {
+      color: color,
+      points: traced.points,
+      seg: metric.seg,
+      total: metric.total,
+      dist: 0,
+      speed: metric.total / Math.max(0.001, duration),
+      hit: traced.hit,
+      x: origin.x,
+      y: origin.y
+    };
+    sfxShoot();
+    burst(shooter.x, shooter.y, color, 4);
+    if (metric.total <= 0.001) {
+      ball.dist = metric.total;
+      advanceBall(0);
+    }
+  }
+  function advanceBall(dt) {
+    if (!ball) return;
+    ball.dist += (ball.speed || SPEED) * dt;
+    if (ball.dist >= ball.total - 0.001) {
+      const hit = ball.hit || ball.points[ball.points.length - 1];
+      const color = ball.color;
+      ball = null;
+      attachBall(hit.x, hit.y, color);
+      return;
+    }
+    const pos = pointAlong(ball.points, ball.seg, ball.dist);
+    ball.x = pos.x;
+    ball.y = pos.y;
+  }
+
+  function unlockAudio() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    if (!audioCtx) {
+      audioCtx = new AC();
+      master = audioCtx.createGain();
+      master.gain.value = 0.85;
+      master.connect(audioCtx.destination);
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  function tone(freq, dur, type, vol, freq2) {
+    if (muted || !audioCtx || !master) return;
+    const t = audioCtx.currentTime;
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(Math.max(48, freq), t);
+    if (freq2) o.frequency.exponentialRampToValueAtTime(Math.max(48, freq2), t + dur);
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g);
+    g.connect(master);
+    o.start(t);
+    o.stop(t + dur + 0.02);
+  }
+  function noise(dur, vol) {
+    if (muted || !audioCtx || !master) return;
+    if (!noiseBuf) {
+      const len = Math.floor(audioCtx.sampleRate * 0.25);
+      noiseBuf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+      const data = noiseBuf.getChannelData(0);
+      for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    }
+    const src = audioCtx.createBufferSource();
+    src.buffer = noiseBuf;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.value = 700;
+    const g = audioCtx.createGain();
+    const t = audioCtx.currentTime;
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(filter);
+    filter.connect(g);
+    g.connect(master);
+    src.start(t);
+    src.stop(t + dur + 0.02);
+  }
+  function sfxShoot() { tone(640, 0.07, 'sine', 0.05, 240); noise(0.04, 0.03); }
+  function sfxStick() { tone(210, 0.05, 'triangle', 0.05, 140); }
+  function sfxFizzle() { tone(180, 0.12, 'sine', 0.04, 70); }
+  function sfxPop(n) {
+    tone(240 + n * 28, 0.1, 'triangle', 0.07, 520 + n * 24);
+    tone(360 + n * 16, 0.16, 'sine', 0.04, 720);
+    noise(0.07, 0.04);
+  }
+  function sfxDrop() { tone(160, 0.12, 'triangle', 0.05, 90); }
+  function sfxLife() { tone(420, 0.16, 'sine', 0.06, 110); noise(0.1, 0.04); }
+  function sfxClear() {
+    [523, 659, 784, 1046].forEach(function (freq, i) {
+      setTimeout(function () { tone(freq, 0.16, 'sine', 0.05); }, i * 85);
+    });
+  }
+  function sfxOver() {
+    tone(392, 0.22, 'sine', 0.06, 180);
+    tone(311, 0.34, 'triangle', 0.05, 98);
+  }
+  function sfxStart() { tone(520, 0.08, 'sine', 0.04, 780); }
+  function sfxUi() { tone(660, 0.04, 'sine', 0.03, 880); }
+  function toggleMute() {
+    muted = !muted;
+    saveMute();
+    updateHud();
+    if (!muted) {
+      unlockAudio();
+      sfxUi();
+    }
+  }
+
+  function roundRect(x, y, w, h, r) {
+    const rr = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
+  }
+  function drawMark(color, radius) {
+    ctx.save();
+    ctx.translate(0, radius * 0.08);
+    ctx.strokeStyle = PALETTE[color].ink;
+    ctx.fillStyle = PALETTE[color].ink;
+    ctx.lineWidth = Math.max(1.2, radius * 0.09);
+    ctx.lineCap = 'round';
+    ctx.globalAlpha = 0.8;
+    const s = radius * 0.28;
+    ctx.beginPath();
+    if (color === 0) {
+      ctx.arc(0, 0, s * 0.7, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (color === 1) {
+      ctx.moveTo(-s, 0);
+      ctx.quadraticCurveTo(0, s * 1.3, s, 0);
+      ctx.stroke();
+    } else if (color === 2) {
+      ctx.moveTo(-s, 0);
+      ctx.quadraticCurveTo(-s * 0.4, -s, 0, 0);
+      ctx.quadraticCurveTo(s * 0.4, s, s, 0);
+      ctx.stroke();
+    } else if (color === 3) {
+      ctx.moveTo(0, -s);
+      ctx.lineTo(s * 0.8, 0);
+      ctx.lineTo(0, s);
+      ctx.lineTo(-s * 0.8, 0);
+      ctx.closePath();
+      ctx.stroke();
+    } else if (color === 4) {
+      ctx.moveTo(0, -s);
+      ctx.lineTo(0, s);
+      ctx.moveTo(-s, 0);
+      ctx.lineTo(s, 0);
+      ctx.moveTo(-s * 0.6, -s * 0.6);
+      ctx.lineTo(s * 0.6, s * 0.6);
+      ctx.moveTo(s * 0.6, -s * 0.6);
+      ctx.lineTo(-s * 0.6, s * 0.6);
+      ctx.stroke();
+    } else {
+      ctx.moveTo(0, -s);
+      ctx.lineTo(s * 0.86, s * 0.55);
+      ctx.lineTo(-s * 0.86, s * 0.55);
+      ctx.closePath();
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function drawOrb(x, y, radius, color, alpha, scale) {
+    const pal = PALETTE[color] || PALETTE[0];
+    const rad = Math.max(0.5, radius * scale);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.globalAlpha = alpha;
+    const glow = ctx.createRadialGradient(0, 0, rad * 0.2, 0, 0, rad * 1.45);
+    glow.addColorStop(0, pal.mid);
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(0, 0, rad * 1.45, 0, Math.PI * 2);
+    ctx.fill();
+    const body = ctx.createRadialGradient(-rad * 0.32, -rad * 0.38, rad * 0.1, rad * 0.1, rad * 0.15, rad);
+    body.addColorStop(0, pal.core);
+    body.addColorStop(0.48, pal.mid);
+    body.addColorStop(1, pal.edge);
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.arc(0, 0, rad, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.72)';
+    ctx.beginPath();
+    ctx.ellipse(-rad * 0.28, -rad * 0.34, rad * 0.26, rad * 0.15, -0.6, 0, Math.PI * 2);
+    ctx.fill();
+    drawMark(color, rad);
+    ctx.restore();
+  }
+  function drawLattice(list, now, bob) {
+    for (let i = 0; i < list.length; i++) {
+      const cell = list[i];
+      const p = cellCenter(cell.c, cell.r);
+      const y = bob ? p.y + Math.sin(now / 700 + cell.phase) * 2.2 : p.y;
+      let scale = bob ? 1 : 1.02;
+      if (!bob) {
+        const bt = born.get(key(cell.c, cell.r));
+        if (bt) {
+          const age = (now - bt) / 170;
+          if (age >= 1) born.delete(key(cell.c, cell.r));
+          else scale = 0.5 + 0.52 * (1 - Math.pow(1 - age, 3));
+        }
+      }
+      drawOrb(p.x, y, R, cell.color, bob ? 0.92 : 1, scale);
+    }
+  }
+  function drawWorld(now) {
+    ctx.fillStyle = 'rgba(255, 214, 180, 0.16)';
+    roundRect(boardLeft, 8, boardWidth, 10, 5);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255, 236, 214, 0.35)';
+    for (let c = 0; c < COLS; c++) {
+      const x = (0 & 1) === 0 ? boardLeft + R + c * diameter : boardLeft + diameter + c * diameter;
+      ctx.fillRect(x - 1.2, 4, 2.4, 8);
+    }
+
+    const lowest = (function () {
+      let m = 0;
+      const source = state === 'title' ? [] : grid;
+      if (source.size) {
+        for (const cell of source.values()) m = Math.max(m, cellBottom(cell.r));
+      }
+      return m;
+    })();
+    const pressure = grid.size ? Math.max(0, Math.min(1, (lowest - (dangerY - rowH * 3)) / (rowH * 3))) : 0;
+
+    if (state !== 'title') {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 220, 190, 0.28)';
+      ctx.lineWidth = 1.2;
+      for (let c = 0; c < COLS; c++) {
+        if (!get(c, topRow)) continue;
+        const p = cellCenter(c, topRow);
+        ctx.beginPath();
+        ctx.moveTo(p.x, 14);
+        ctx.lineTo(p.x, p.y - R * 0.92);
+        ctx.stroke();
+      }
+      ctx.restore();
+      drawLattice([...grid.values()], now, false);
+      for (let i = 0; i < falling.length; i++) {
+        const f = falling[i];
+        drawOrb(f.x, f.y, R, f.color, Math.max(0, f.life), 1);
+      }
+    } else {
+      drawLattice(attract, now, true);
+    }
+
+    if (state === 'playing' && !ball) {
+      const guide = tracePath(aim);
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 214, 150, 0.8)';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.setLineDash([3, 9]);
+      if (!calm) {
+        ctx.shadowColor = '#ffb03a';
+        ctx.shadowBlur = 8;
+      }
+      ctx.beginPath();
+      for (let i = 0; i < guide.points.length; i++) {
+        const p = guide.points[i];
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
+      ctx.restore();
+      if (guide.hit) {
+        const spot = nearestLegalCell(guide.hit.x, guide.hit.y);
+        if (spot) {
+          const gp = cellCenter(spot.c, spot.r);
+          const group = visitTemp(spot.c, spot.r, chamber, function () {
+            return collectGroup(spot.c, spot.r);
+          });
+          drawOrb(gp.x, gp.y, R, chamber, 0.34, 1);
+          if (group.length >= 3) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255, 248, 230, 0.9)';
+            ctx.lineWidth = 2;
+            const pulse = 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(now / 120));
+            ctx.globalAlpha = pulse;
+            for (let i = 0; i < group.length; i++) {
+              if (group[i].c === spot.c && group[i].r === spot.r) continue;
+              const q = cellCenter(group[i].c, group[i].r);
+              ctx.beginPath();
+              ctx.arc(q.x, q.y, R + 3, 0, Math.PI * 2);
+              ctx.stroke();
+            }
+            ctx.restore();
+          }
+        }
+      }
+    }
+
+    if (ball) drawOrb(ball.x, ball.y, R * 0.96, ball.color, 1, 1);
+
+    for (let i = 0; i < rings.length; i++) {
+      const ring = rings[i];
+      const u = 1 - ring.life / ring.max;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, ring.life / ring.max);
+      ctx.strokeStyle = ring.color;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(ring.x, ring.y, 8 + u * 42, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      ctx.globalAlpha = Math.max(0, p.life / p.max);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    if (state !== 'title') {
+      const lineA = 0.28 + pressure * 0.55 + 0.08 * Math.sin(now / 180);
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 90, 110, ' + lineA + ')';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([7, 8]);
+      ctx.beginPath();
+      ctx.moveTo(boardLeft, dangerY);
+      ctx.lineTo(boardRight, dangerY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+      ctx.fillStyle = 'rgba(255, 180, 170, 0.75)';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText('LANTERN LINE', boardLeft, dangerY - 4);
+    }
+
+    ctx.save();
+    ctx.translate(shooter.x, shooter.y);
+    const g = ctx.createLinearGradient(-40, 14, 40, 30);
+    g.addColorStop(0, '#3a2416');
+    g.addColorStop(0.5, '#e0b068');
+    g.addColorStop(1, '#3a2416');
+    ctx.fillStyle = g;
+    roundRect(-42, 16, 84, 14, 7);
+    ctx.fill();
+    ctx.restore();
+    if (state !== 'title') {
+      drawOrb(shooter.x, shooter.y, R * 0.9, chamber, 1, 1);
+      drawOrb(shooter.x + R * 3.15, shooter.y + 10, R * 0.46, preview, 1, 1);
+      ctx.fillStyle = 'rgba(255, 232, 206, 0.7)';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText('NEXT', shooter.x + R * 3.15, shooter.y + R * 0.46 + 16);
+      const frac = idleLimit > 0 ? Math.max(0, Math.min(1, idle / idleLimit)) : 0;
+      ctx.fillStyle = 'rgba(255,255,255,0.1)';
+      roundRect(shooter.x - 74, shooter.y + 38, 148, 5, 3);
+      ctx.fill();
+      ctx.fillStyle = frac > 0.75 ? '#ff6b8a' : '#ffb03a';
+      if (frac > 0) {
+        roundRect(shooter.x - 74, shooter.y + 38, 148 * frac, 5, 3);
+        ctx.fill();
+      }
+    }
+
+    for (let i = 0; i < floaters.length; i++) {
+      const f = floaters[i];
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, f.life / f.max);
+      ctx.fillStyle = f.color;
+      ctx.font = '700 18px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(f.text, f.x, f.y);
+      ctx.restore();
+    }
+    if (announce && announce.life > 0) {
+      const alpha = Math.max(0, Math.min(1, announce.life * 2));
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#fff6e4';
+      ctx.font = '800 28px sans-serif';
+      ctx.fillText(announce.text, VW / 2, 78);
+      if (announce.sub) {
+        ctx.fillStyle = '#ffb03a';
+        ctx.font = '700 16px sans-serif';
+        ctx.fillText(announce.sub, VW / 2, 106);
+      }
+      ctx.restore();
+    }
+    if (flashA > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(0.55, flashA);
+      ctx.fillStyle = flashColor;
+      ctx.fillRect(0, 0, VW, VH);
+      ctx.restore();
+    }
+  }
+  function drawDust(dt) {
+    ctx.save();
+    for (let i = 0; i < dust.length; i++) {
+      const mote = dust[i];
+      mote.y -= mote.s * dt;
+      mote.x += Math.sin(mote.p + mote.y * 0.01) * 8 * dt;
+      if (mote.y < -4) mote.y = VH + 4;
+      ctx.globalAlpha = mote.a;
+      ctx.fillStyle = '#ffe0b8';
+      ctx.beginPath();
+      ctx.arc(mote.x, mote.y, mote.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+  function draw(now, dt) {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, viewW, viewH);
+    const bg = ctx.createLinearGradient(0, 0, 0, viewH);
+    bg.addColorStop(0, '#3a2040');
+    bg.addColorStop(0.42, '#1a0e1c');
+    bg.addColorStop(1, '#07040c');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, viewW, viewH);
+    ctx.save();
+    ctx.translate(offsetX, offsetY);
+    ctx.scale(worldScale, worldScale);
+    drawDust(state === 'paused' ? 0 : dt);
+    if (shake > 0.001 && !calm) {
+      const mag = shake * 7;
+      ctx.translate(Math.sin(now * 0.05) * mag, Math.cos(now * 0.07) * mag);
+    }
+    // Vines in the margins.
+    ctx.save();
+    ctx.strokeStyle = 'rgba(90, 140, 80, 0.25)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(8, 0);
+    ctx.quadraticCurveTo(28, 180, 10, 360);
+    ctx.quadraticCurveTo(30, 520, 12, 760);
+    ctx.moveTo(VW - 8, 0);
+    ctx.quadraticCurveTo(VW - 30, 200, VW - 12, 420);
+    ctx.quadraticCurveTo(VW - 28, 600, VW - 10, 790);
+    ctx.stroke();
+    ctx.restore();
+    drawWorld(now);
+    ctx.restore();
+  }
+
+  function stepAim(dt) {
+    let axis = 0;
+    if (keys.has('left')) axis -= 1;
+    if (keys.has('right')) axis += 1;
+    if (axis) aim = Math.max(AIM_MIN, Math.min(AIM_MAX, aim + axis * 1.7 * dt));
+  }
+  function stepEffects(dt) {
+    shake *= Math.exp(-dt * 5.5);
+    if (shake < 0.004) shake = 0;
+    flashA *= Math.exp(-dt * 3.4);
+    if (flashA < 0.01) flashA = 0;
+    if (announce) {
+      announce.life -= dt;
+      if (announce.life <= 0) announce = null;
+    }
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.life -= dt;
+      p.vy += p.g * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+    for (let i = falling.length - 1; i >= 0; i--) {
+      const f = falling[i];
+      f.life -= dt;
+      f.vy += 640 * dt;
+      f.x += f.vx * dt;
+      f.y += f.vy * dt;
+      if (f.life <= 0 || f.y > VH + 40) {
+        if (f.life <= 0 || f.y > VH + 20) burst(f.x, Math.min(f.y, VH - 20), f.color, 5);
+        falling.splice(i, 1);
+      }
+    }
+    for (let i = rings.length - 1; i >= 0; i--) {
+      rings[i].life -= dt;
+      if (rings[i].life <= 0) rings.splice(i, 1);
+    }
+    for (let i = floaters.length - 1; i >= 0; i--) {
+      floaters[i].life -= dt;
+      floaters[i].y -= 28 * dt;
+      if (floaters[i].life <= 0) floaters.splice(i, 1);
+    }
+  }
+  function step(dt) {
+    if (state === 'playing') {
+      stepAim(dt);
+      if (ball) advanceBall(dt);
+      else {
+        idle += dt;
+        if (idle >= idleLimit && grid.size) triggerDrop();
+      }
+    } else if (state === 'clear') {
+      clearLeft -= dt;
+      if (clearLeft <= 0) beginNextLevel();
+    }
+  }
+  function frame(ts) {
+    if (!lastTs) lastTs = ts;
+    const dt = Math.min(0.033, Math.max(0, (ts - lastTs) / 1000));
+    lastTs = ts;
+    if (document.hidden && (state === 'playing' || state === 'clear')) pauseGame('hidden');
+    if (state !== 'paused') {
+      step(dt);
+      stepEffects(dt);
+    }
+    draw(ts, state === 'paused' ? 0 : dt);
+    requestAnimationFrame(frame);
+  }
+  function fit(fromResize) {
+    const w = Math.max(1, stage.clientWidth);
+    const h = Math.max(1, stage.clientHeight);
+    const changed = fittedOnce && (Math.abs(w - viewW) > 8 || Math.abs(h - viewH) > 8);
+    viewW = w;
+    viewH = h;
+    fittedOnce = true;
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.max(1, Math.round(w * dpr));
+    canvas.height = Math.max(1, Math.round(h * dpr));
+    worldScale = Math.min(w / VW, h / VH);
+    offsetX = (w - VW * worldScale) / 2;
+    offsetY = (h - VH * worldScale) / 2;
+    if (fromResize && changed) pauseGame('resize');
+  }
+  function worldFromEvent(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left - offsetX) / (worldScale || 1),
+      y: (e.clientY - rect.top - offsetY) / (worldScale || 1)
+    };
+  }
+  function setAimFromWorld(x, y) {
+    const ang = Math.atan2(y - shooter.y, x - shooter.x);
+    if (ang > 0) aim = ang > Math.PI / 2 ? AIM_MIN : AIM_MAX;
+    else aim = Math.max(AIM_MIN, Math.min(AIM_MAX, ang));
+  }
+  function codeToAxis(code) {
+    if (code === 'ArrowLeft' || code === 'KeyA') return 'left';
+    if (code === 'ArrowRight' || code === 'KeyD') return 'right';
+    return null;
+  }
+  function isHudButton(target) {
+    return !!(target && target.closest && target.closest('#btn-mute, #btn-pause, #btn-start, #btn-resume, #btn-restart, #btn-again, #t-left, #t-right'));
+  }
+
+  canvas.addEventListener('pointerdown', function (e) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    activePointer = e.pointerId;
+    if (canvas.setPointerCapture) {
+      try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    }
+    if (state !== 'playing') return;
+    const p = worldFromEvent(e);
+    setAimFromWorld(p.x, p.y);
+  }, { passive: false });
+  canvas.addEventListener('pointermove', function (e) {
+    if (state !== 'playing') return;
+    if (e.pointerType === 'touch' && activePointer !== e.pointerId) return;
+    const p = worldFromEvent(e);
+    setAimFromWorld(p.x, p.y);
+  });
+  canvas.addEventListener('pointerup', function (e) {
+    if (activePointer !== null && e.pointerId !== activePointer) return;
+    activePointer = null;
+    if (state !== 'playing') return;
+    const p = worldFromEvent(e);
+    setAimFromWorld(p.x, p.y);
+    tryShoot();
+  });
+  canvas.addEventListener('pointercancel', function () { activePointer = null; });
+  canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+  function bindAxis(btn, axis) {
+    btn.addEventListener('pointerdown', function (e) {
+      e.preventDefault();
+      keys.add(axis);
+      if (btn.setPointerCapture) {
+        try { btn.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+      }
+    });
+    const release = function () { keys.delete(axis); };
+    btn.addEventListener('pointerup', release);
+    btn.addEventListener('pointercancel', release);
+    btn.addEventListener('lostpointercapture', release);
+  }
+  bindAxis(document.getElementById('t-left'), 'left');
+  bindAxis(document.getElementById('t-right'), 'right');
+  document.getElementById('t-fire').addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    tryShoot();
+  });
+
+  document.getElementById('btn-start').addEventListener('click', function () { startGame(); });
+  document.getElementById('btn-resume').addEventListener('click', function () { resumeGame(); });
+  document.getElementById('btn-restart').addEventListener('click', function () { startGame(); });
+  document.getElementById('btn-again').addEventListener('click', function () { startGame(); });
+  pauseBtn.addEventListener('click', function () { togglePause(); });
+  muteBtn.addEventListener('click', function () { toggleMute(); });
+
+  window.addEventListener('keydown', function (e) {
+    const axis = codeToAxis(e.code);
+    if (axis) {
+      e.preventDefault();
+      keys.add(axis);
+    }
+    if (e.code === 'Space') e.preventDefault();
+    if (e.repeat) return;
+    if ((e.code === 'Space' || e.code === 'Enter') && isHudButton(e.target)) return;
+    if (e.code === 'KeyM') {
+      toggleMute();
+      return;
+    }
+    if (e.code === 'KeyP' || e.code === 'Escape') {
+      if (state === 'playing' || state === 'clear' || state === 'paused') togglePause();
+      return;
+    }
+    if (e.code === 'KeyR') {
+      if (state !== 'title') startGame();
+      return;
+    }
+    if (e.code === 'Enter') {
+      if (state === 'title' || state === 'over') startGame();
+      else if (state === 'paused') resumeGame();
+      return;
+    }
+    if (e.code === 'Space') {
+      if (state === 'title') startGame();
+      else if (state === 'paused') resumeGame();
+      else if (state === 'over') startGame();
+      else tryShoot();
+    }
+  });
+  window.addEventListener('keyup', function (e) {
+    const axis = codeToAxis(e.code);
+    if (axis) keys.delete(axis);
+  });
+  window.addEventListener('blur', function () {
+    keys.clear();
+    activePointer = null;
+    pauseGame('blur');
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) pauseGame('hidden');
+  });
+  window.addEventListener('resize', function () { fit(true); });
+  if (window.matchMedia('(pointer: coarse)').matches) document.body.classList.add('touch');
+  window.addEventListener('pointerdown', function (e) {
+    if (e.pointerType === 'touch' && !document.body.classList.contains('touch')) {
+      document.body.classList.add('touch');
+      fit(false);
+    }
+  }, { passive: true });
+
+  function assertGeometry() {
+    for (let r = 0; r < 5; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const p = cellCenter(c, r);
+        if (p.x - R < boardLeft - 0.05 || p.x + R > boardRight + 0.05) {
+          throw new Error('cell escapes the glass');
+        }
+        const ns = neighbors(c, r);
+        for (let i = 0; i < ns.length; i++) {
+          const q = cellCenter(ns[i].c, ns[i].r);
+          const d = Math.hypot(p.x - q.x, p.y - q.y);
+          if (Math.abs(d - diameter) > 0.05) throw new Error('neighbor gap ' + d);
+        }
+      }
+    }
+  }
+
+  function runSelfTest() {
+    testing = true;
+    document.body.classList.add('selftest');
+    const report = [];
+    function check(name, cond) {
+      report.push((cond ? 'PASS ' : 'FAIL ') + name);
+    }
+    try { runChecks(); }
+    catch (err) {
+      report.push('FAIL exception ' + (err && err.stack ? err.stack : err));
+    }
+    selftestEl.textContent = report.join('\n');
+    window.__SELFTEST__ = report;
+    const failed = report.filter(function (line) { return line.indexOf('FAIL') === 0; });
+    if (failed.length) selftestEl.textContent += '\n' + failed.length + ' FAILED';
+
+    function runChecks() {
+    try {
+      assertGeometry();
+      check('geometry', true);
+    } catch (err) {
+      check('geometry ' + err.message, false);
+    }
+    check('upper rows safe', cellBottom(8) < dangerY);
+    check('deep row unsafe', cellBottom(16) > dangerY);
+
+    startGame();
+    let bloom = false;
+    for (const cell of grid.values()) {
+      if (collectGroup(cell.c, cell.r).length >= 3) bloom = true;
+    }
+    check('opening has no bloom', !bloom && grid.size > 20);
+    check('opening anchored', findOrphans().length === 0);
+    const present = colorsPresent();
+    check('queue colors exist', present.has(chamber) && present.has(preview));
+
+    aim = -Math.PI / 2;
+    const straight = tracePath(aim);
+    check('straight trace hits', !!straight.hit && straight.points.length > 2);
+    const pocket = straight.hit ? nearestLegalCell(straight.hit.x, straight.hit.y) : null;
+    check('straight snap', !!pocket);
+    const before = grid.size;
+    tryShoot();
+    check('single ball', !!ball);
+    tryShoot();
+    check('no double fire', !!ball);
+    if (ball) {
+      ball.dist = ball.total;
+      advanceBall(0.016);
+    }
+    check('shot resolved', ball === null);
+    check('shot changed the lattice or cleared', grid.size !== before || state === 'clear');
+
+    aim = AIM_MIN;
+    const side = tracePath(aim);
+    check('bank shot ends', side.points.length > 2 && side.points.length < 2000 && !!side.hit);
+
+    grid.clear();
+    for (let c = 0; c < COLS; c++) setCell(c, 0, 1);
+    setCell(0, 1, 0);
+    setCell(1, 1, 0);
+    setCell(2, 1, 0);
+    setCell(1, 2, 2);
+    state = 'playing';
+    shotsSinceDrop = 0;
+    score = 0;
+    combo = 0;
+    settle(2, 1);
+    check('bloom score', score > 0);
+    check('matched orbs gone', !get(0, 1) && !get(1, 1) && !get(2, 1));
+    check('orphan fell', !get(1, 2));
+    check('ceiling stayed', !!get(0, 0) && !!get(COLS - 1, 0));
+    check('combo armed', combo === 1);
+    setCell(4, 1, 2);
+    settle(4, 1);
+    check('miss resets combo', combo === 0 && !!get(4, 1));
+
+    const spot = nearestLegalCell(cellCenter(3, 1).x, cellCenter(3, 1).y + R * 0.4);
+    check('pocket snap', !!spot && spot.c === 3 && spot.r === 1);
+
+    function fatalRow() {
+      let r = 0;
+      while (cellBottom(r + 1) <= dangerY) r += 1;
+      return r;
+    }
+    function buildFatal() {
+      topRow = 0;
+      const r = fatalRow();
+      grid.clear();
+      patternPhase = 0;
+      for (let rr = 0; rr <= r; rr++) {
+        for (let c = 0; c < COLS; c++) setCell(c, rr, patternColor(c, rr));
+      }
+      return r;
+    }
+    buildFatal();
+    state = 'playing';
+    lives = 2;
+    check('fatal prepared', overLineAt(1) && !overLineAt(0));
+    triggerDrop();
+    check('lantern lost', lives === 1 && state === 'playing');
+    check('mercy cleared the line', !overLineAt(0));
+    buildFatal();
+    state = 'playing';
+    lives = 1;
+    triggerDrop();
+    check('last lantern ends the run (' + lives + ' ' + state + ')', lives === 0 && state === 'over');
+
+    grid.clear();
+    topRow = 0;
+    patternPhase = 1;
+    for (let c = 0; c < COLS; c++) setCell(c, 0, patternColor(c, 0));
+    setCell(1, 1, patternColor(1, 1));
+    state = 'playing';
+    lives = 3;
+    dropEvery = 8;
+    shotsSinceDrop = 7;
+    const sizeBefore = grid.size;
+    registerShot();
+    check('scheduled drop grows the ceiling', state === 'playing' && !!get(0, 0) && grid.size === sizeBefore + COLS);
+
+    // Temp cell never sticks.
+    const k = key(0, 0);
+    const prev = grid.get(k);
+    visitTemp(0, 0, 0, function () { return collectGroup(0, 0); });
+    const after = grid.get(k);
+    check('preview restores grid', !!prev && !!after && prev.color === after.color && grid.size >= 8);
+
+    state = 'playing';
+    lives = 3;
+    level = 1;
+    combo = 0;
+    startLevel();
+    let shots = 0;
+    let orphanFault = false;
+    let bloomFault = false;
+    while (state === 'playing' && shots < 30) {
+      aim = AIM_MIN + ((shots * 0.37) % 1) * (AIM_MAX - AIM_MIN);
+      tryShoot();
+      if (ball) {
+        ball.dist = ball.total;
+        advanceBall(0.016);
+      }
+      shots += 1;
+      if (findOrphans().length) orphanFault = true;
+      for (const cell of grid.values()) {
+        if (collectGroup(cell.c, cell.r).length >= 3) bloomFault = true;
+      }
+      if (orphanFault || bloomFault) break;
+    }
+    check('stress shots ran', shots >= 8);
+    check('stress no orphans', !orphanFault);
+    check('stress no leftover blooms', !bloomFault);
+    check('stress state sane', state === 'playing' || state === 'clear' || state === 'over');
+
+    }
+  }
+
+  try { assertGeometry(); }
+  catch (err) {
+    const tag = document.querySelector('.tag');
+    if (tag) tag.textContent = 'Geometry error: ' + err.message;
+  }
+
+  updateHud();
+  fit(false);
+  requestAnimationFrame(frame);
+  if (location.hash === '#selftest') runSelfTest();
+})();
+</script>
+</body>
+</html>
