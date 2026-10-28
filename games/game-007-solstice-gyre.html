@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#07060d">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src 'none'; media-src 'none';">
+<title>Solstice Gyre</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='6' fill='%23ffc56a'/%3E%3Cpath d='M16 3l1.2 6.2L16 11l-1.2-1.8zM16 29l-1.2-6.2L16 21l1.2 1.8zM3 16l6.2-1.2L11 16l-1.8 1.2zM29 16l-6.2 1.2L21 16l1.8-1.2z' fill='%23ff7a45'/%3E%3C/svg%3E">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #07060d;
+    --ink: #fff6e8;
+    --dim: #cbbba6;
+    --gold: #ffc56a;
+    --ember: #ff7a45;
+    --line: rgba(255, 197, 106, 0.38);
+    --card: rgba(12, 9, 18, 0.88);
+    --font: ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font);
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button, kbd { font-family: inherit; }
+  button { touch-action: manipulation; }
+  [hidden] { display: none !important; }
+  #view {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    z-index: 0;
+    touch-action: none;
+  }
+  #hud {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 5;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left));
+    pointer-events: none;
+  }
+  .stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    min-width: 0;
+  }
+  .stat { display: flex; flex-direction: column; line-height: 1.05; min-width: 46px; }
+  .lbl {
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--dim);
+    font-weight: 700;
+  }
+  .stat b {
+    font-size: 20px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 780;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  }
+  #hudScore.hot, #hudBest.hot {
+    color: var(--gold);
+    text-shadow: 0 0 14px rgba(255, 197, 106, 0.75);
+  }
+  #hudWave { color: var(--gold); letter-spacing: 0.08em; font-size: 16px; }
+  .actions { display: flex; gap: 8px; pointer-events: auto; }
+  button.ghost, button.solid {
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--ink);
+    background: rgba(10, 8, 16, 0.72);
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  button.solid {
+    background: linear-gradient(180deg, #ffd98a, #ff8a3d);
+    color: #2a1408;
+    border-color: transparent;
+    box-shadow: 0 0 22px rgba(255, 154, 60, 0.35);
+  }
+  button.ghost:hover, button.solid:hover { filter: brightness(1.06); }
+  button:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 3px;
+  }
+  #btnPause { display: none; }
+  body[data-mode="playing"] #btnPause,
+  body[data-mode="paused"] #btnPause { display: inline-flex; }
+  #pips {
+    position: fixed;
+    z-index: 5;
+    top: calc(58px + env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    gap: 6px;
+    pointer-events: none;
+  }
+  body[data-mode="playing"] #pips,
+  body[data-mode="paused"] #pips { display: flex; }
+  #pips span {
+    width: 8px;
+    height: 8px;
+    border-radius: 99px;
+    background: rgba(255, 214, 160, 0.18);
+    box-shadow: inset 0 0 0 1px rgba(255, 197, 106, 0.4);
+  }
+  #pips span.on {
+    background: var(--gold);
+    box-shadow: 0 0 8px var(--gold);
+  }
+  #hint {
+    position: fixed;
+    z-index: 5;
+    left: 50%;
+    bottom: calc(112px + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    margin: 0;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: rgba(8, 6, 14, 0.72);
+    color: var(--gold);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    pointer-events: none;
+    white-space: nowrap;
+    max-width: calc(100% - 24px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #touch {
+    position: fixed;
+    z-index: 6;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: none;
+    justify-content: space-between;
+    padding:
+      0
+      max(16px, env(safe-area-inset-right))
+      max(16px, env(safe-area-inset-bottom))
+      max(16px, env(safe-area-inset-left));
+    pointer-events: none;
+  }
+  body[data-mode="playing"] #touch { display: flex; }
+  #touch button {
+    pointer-events: auto;
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: radial-gradient(circle at 40% 35%, rgba(255, 214, 150, 0.22), rgba(8, 6, 14, 0.78) 62%);
+    color: var(--gold);
+    font-size: 30px;
+    line-height: 1;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 0 18px rgba(255, 180, 80, 0.12);
+    cursor: pointer;
+  }
+  #touch button:active {
+    transform: scale(0.96);
+    background: radial-gradient(circle at 40% 35%, rgba(255, 214, 150, 0.4), rgba(20, 12, 8, 0.85) 62%);
+  }
+  #overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 4;
+    display: grid;
+    place-items: center;
+    padding:
+      calc(76px + env(safe-area-inset-top))
+      max(16px, env(safe-area-inset-right))
+      max(16px, env(safe-area-inset-bottom))
+      max(16px, env(safe-area-inset-left));
+    background: radial-gradient(ellipse at center, rgba(7, 6, 13, 0.2), rgba(7, 6, 13, 0.62));
+    overflow: auto;
+  }
+  .card {
+    width: min(440px, 100%);
+    max-height: 100%;
+    overflow: auto;
+    padding: 26px 22px 20px;
+    border-radius: 22px;
+    border: 1px solid var(--line);
+    background: linear-gradient(180deg, rgba(28, 18, 32, 0.94), rgba(8, 6, 14, 0.94));
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45), 0 0 40px rgba(255, 140, 60, 0.08);
+  }
+  .eyebrow {
+    margin: 0 0 6px;
+    color: var(--gold);
+    letter-spacing: 0.22em;
+    font-size: 11px;
+    font-weight: 800;
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(32px, 8vw, 52px);
+    line-height: 0.95;
+    letter-spacing: 0.12em;
+    font-weight: 850;
+    background: linear-gradient(180deg, #fff8ea 10%, #ffc56a 48%, #ff7a45 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 8px 18px rgba(255, 140, 50, 0.22));
+  }
+  h2 {
+    margin: 0;
+    font-size: clamp(28px, 7vw, 42px);
+    letter-spacing: 0.14em;
+    font-weight: 850;
+  }
+  .lede, .help, .fine {
+    color: var(--dim);
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .lede { margin: 12px 0 0; }
+  .help { margin: 14px 0; padding: 0; list-style: none; }
+  .help li { margin: 0 0 8px; }
+  .help strong { color: var(--ink); font-weight: 700; }
+  kbd {
+    display: inline-block;
+    min-width: 1.3em;
+    padding: 0.05em 0.4em;
+    margin: 0 0.05em;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: rgba(255, 197, 106, 0.08);
+    color: var(--ink);
+    font-size: 0.92em;
+    text-align: center;
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  .bestline { margin: 12px 0 16px; color: var(--dim); font-size: 14px; }
+  .bestline b { color: var(--gold); font-size: 18px; }
+  .big {
+    margin: 8px 0 2px;
+    font-size: 56px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    text-shadow: 0 0 22px rgba(255, 197, 106, 0.28);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin: 12px 0 16px;
+  }
+  .grid div {
+    padding: 8px;
+    border-radius: 12px;
+    background: rgba(255, 197, 106, 0.06);
+    border: 1px solid rgba(255, 197, 106, 0.14);
+  }
+  .grid .lbl { display: block; margin-bottom: 4px; }
+  .grid b { font-size: 18px; }
+  .badge {
+    display: inline-block;
+    margin: 0 0 8px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: rgba(255, 197, 106, 0.16);
+    color: var(--gold);
+    letter-spacing: 0.14em;
+    font-size: 11px;
+    font-weight: 800;
+  }
+  .fine { margin: 12px 0 0; font-size: 12px; }
+  @media (max-width: 420px) {
+    .stat b { font-size: 16px; }
+    #touch button { width: 74px; height: 74px; }
+    .big { font-size: 46px; }
+  }
+</style>
+</head>
+<body data-mode="menu">
+<canvas id="view" width="800" height="600" aria-hidden="true"></canvas>
+<header id="hud">
+  <div class="stats">
+    <div class="stat"><span class="lbl">Score</span><b id="hudScore">0</b></div>
+    <div class="stat"><span class="lbl">Best</span><b id="hudBest">0</b></div>
+    <div class="stat"><span class="lbl" id="hudWaveLbl">Wave 1</span><b id="hudWave">DAWN</b></div>
+    <div class="stat"><span class="lbl">Gates</span><b id="hudGates">0</b></div>
+    <div class="stat"><span class="lbl">Chain</span><b id="hudChain">–</b></div>
+  </div>
+  <div class="actions">
+    <button id="btnPause" class="ghost" type="button">Pause</button>
+    <button id="btnMute" class="ghost" type="button" aria-pressed="false">Mute</button>
+  </div>
+</header>
+<div id="pips" aria-hidden="true"></div>
+<p id="hint" hidden>Stay inside the glowing gate</p>
+<div id="touch">
+  <button id="btnLeft" type="button" aria-label="Rotate counter-clockwise">↺</button>
+  <button id="btnRight" type="button" aria-label="Rotate clockwise">↻</button>
+</div>
+<div id="overlay">
+  <section class="card" id="screenMenu">
+    <p class="eyebrow">OFFLINE ARCADE</p>
+    <h1>SOLSTICE<br>GYRE</h1>
+    <p class="lede">Thread the eclipse. You are a spark on a turning orbit, and the plates are closing in.</p>
+    <p class="bestline">Best <b id="menuBest">0</b></p>
+    <ul class="help">
+      <li><strong>Ride</strong> — the spark follows the turning orbit on its own. You only steer when a gate shifts.</li>
+      <li><strong>Steer</strong> — tap <kbd>←</kbd> <kbd>A</kbd> or <kbd>→</kbd> <kbd>D</kbd>. On a touch screen, hold the left or right half, or the ↺ ↻ buttons. A short press slides you one sector; holding too long carries you out of the gate.</li>
+      <li><strong>Survive</strong> — bright plates are solid. Skim an edge for a close-call chain. Every 8 gates the pattern changes.</li>
+      <li><strong>System</strong> — <kbd>P</kbd> <kbd>Esc</kbd> or <kbd>Space</kbd> pauses, <kbd>M</kbd> mutes, <kbd>R</kbd> restarts. One scrape ends the run.</li>
+    </ul>
+    <div class="row">
+      <button id="btnStart" class="solid" type="button">Enter the Gyre</button>
+    </div>
+    <p class="fine">Best score is saved on this device. Sound is synthesized in the browser. Nothing is loaded from the network.</p>
+  </section>
+  <section class="card" id="screenPause" hidden>
+    <p class="eyebrow">PAUSED</p>
+    <h2>STILL POINT</h2>
+    <p class="lede">The gyre waits. Plates freeze where they are.</p>
+    <ul class="help">
+      <li><kbd>←</kbd> <kbd>A</kbd> and <kbd>→</kbd> <kbd>D</kbd>, or either side of the screen, slide the spark to the next gate.</li>
+      <li><kbd>P</kbd>, <kbd>Esc</kbd>, or <kbd>Space</kbd> resumes. <kbd>R</kbd> restarts. <kbd>M</kbd> mutes.</li>
+    </ul>
+    <div class="row">
+      <button id="btnResume" class="solid" type="button">Resume</button>
+      <button id="btnPauseRestart" class="ghost" type="button">Restart</button>
+    </div>
+  </section>
+  <section class="card" id="screenOver" hidden>
+    <p class="eyebrow">RUN OVER</p>
+    <h2>ECLIPSED</h2>
+    <p class="badge" id="overNew" hidden>NEW BEST</p>
+    <div class="big" id="overScore">0</div>
+    <div class="grid">
+      <div><span class="lbl">Best</span><b id="overBest">0</b></div>
+      <div><span class="lbl">Gates</span><b id="overGates">0</b></div>
+      <div><span class="lbl">Best chain</span><b id="overChain">0</b></div>
+    </div>
+    <div class="row">
+      <button id="btnAgain" class="solid" type="button">Ride again</button>
+    </div>
+    <p class="fine"><kbd>Space</kbd>, <kbd>Enter</kbd>, or <kbd>R</kbd> restarts instantly.</p>
+  </section>
+</div>
+<noscript>Solstice Gyre needs JavaScript. This file runs entirely offline.</noscript>
+<script>
+'use strict';
+(function () {
+  const TAU = Math.PI * 2;
+  const SIDES = 6;
+  const SIDE = TAU / SIDES;
+  const PLAYER_R = 92;
+  const HIT_R = 11;
+  const GRACE = 0.11;
+  const SHIFT_SPEED = 1.72;
+  const PLAYER_ACCEL = 14;
+  const SPIN_ACC = 0.62;
+  const SPEED_ACC = 36;
+  const WAVE_EVERY = 8;
+  const BEST_KEY = 'solstice-gyre-best';
+  const MUTE_KEY = 'solstice-gyre-mute';
+  const NOTES = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66];
+  const DRONE = [196, 220, 246.94, 261.63, 293.66, 329.63, 349.23, 392];
+
+  const PATTERNS = [
+    { name: 'DAWN',    gap: 2, step: 0, swing: false, spacing: 168, thick: 32, speed: 112, spin: 0.34, hue: 36 },
+    { name: 'DRIFT',   gap: 2, step: 1, swing: false, spacing: 176, thick: 32, speed: 134, spin: 0.5,  hue: 22 },
+    { name: 'HELIX',   gap: 2, step: 1, swing: false, spacing: 180, thick: 34, speed: 152, spin: 0.72, hue: 350 },
+    { name: 'SWING',   gap: 2, step: 1, swing: true,  spacing: 188, thick: 32, speed: 148, spin: -0.5, hue: 278 },
+    { name: 'DUSK',    gap: 1, step: 1, swing: false, spacing: 220, thick: 32, speed: 172, spin: 0.78, hue: 204 },
+    { name: 'NEEDLE',  gap: 1, step: 0, swing: false, spacing: 196, thick: 30, speed: 196, spin: 0.98, hue: 164 },
+    { name: 'CORONA',  gap: 1, step: 1, swing: false, spacing: 230, thick: 32, speed: 208, spin: -0.9, hue: 332 },
+    { name: 'ZENITH',  gap: 1, step: 1, swing: true,  spacing: 240, thick: 30, speed: 220, spin: 1.02, hue: 42 }
+  ];
+
+  const canvas = document.getElementById('view');
+  const ctx = canvas.getContext('2d', { alpha: false });
+  const hudScore = document.getElementById('hudScore');
+  const hudBest = document.getElementById('hudBest');
+  const hudWave = document.getElementById('hudWave');
+  const hudWaveLbl = document.getElementById('hudWaveLbl');
+  const hudGates = document.getElementById('hudGates');
+  const hudChain = document.getElementById('hudChain');
+  const pipsEl = document.getElementById('pips');
+  const hintEl = document.getElementById('hint');
+  const overlay = document.getElementById('overlay');
+  const screenMenu = document.getElementById('screenMenu');
+  const screenPause = document.getElementById('screenPause');
+  const screenOver = document.getElementById('screenOver');
+  const btnPause = document.getElementById('btnPause');
+  const btnMute = document.getElementById('btnMute');
+  const menuBest = document.getElementById('menuBest');
+  const overScore = document.getElementById('overScore');
+  const overBest = document.getElementById('overBest');
+  const overGates = document.getElementById('overGates');
+  const overChain = document.getElementById('overChain');
+  const overNew = document.getElementById('overNew');
+
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const pipNodes = [];
+  for (let i = 0; i < WAVE_EVERY; i++) {
+    const s = document.createElement('span');
+    pipsEl.appendChild(s);
+    pipNodes.push(s);
+  }
+
+  let w = 800, h = 600, dpr = 1, scale = 1;
+  let viewW = 0, viewH = 0;
+  let mode = 'menu';
+  let best = 0;
+  let muted = false;
+  let score = 0;
+  let passed = 0;
+  let chain = 0;
+  let bestChain = 0;
+  let newBest = false;
+  let spin = 0;
+  let spinVel = 0;
+  let targetSpin = PATTERNS[0].spin;
+  let wallSpeed = PATTERNS[0].speed;
+  let targetSpeed = PATTERNS[0].speed;
+  let helixDir = 1;
+  let swingSign = 1;
+  let walls = [];
+  let particles = [];
+  let floaters = [];
+  let shocks = [];
+  let trail = [];
+  let stars = [];
+  let trauma = 0;
+  let flash = 0;
+  let flashColor = '255, 236, 214';
+  let banner = { text: '', life: 0 };
+  let hintTime = 0;
+  let hintShown = '';
+  let clock = 0;
+  let runTime = 0;
+  const player = { angle: 0, vel: 0 };
+
+  const keys = new Set();
+  let lastKeyDir = 0;
+  const pointers = new Map();
+  const lockedPtrs = new Set();
+  let pointerDir = 0;
+
+  let actx = null;
+  let master = null;
+  let music = null;
+  let nextNote = 0;
+  let noteStep = 0;
+
+  function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+  function norm(a) {
+    a %= TAU;
+    if (a < 0) a += TAU;
+    return a;
+  }
+  function mod(n, m) { return ((n % m) + m) % m; }
+  function angDelta(from, to) {
+    let d = norm(to) - norm(from);
+    if (d > Math.PI) d -= TAU;
+    if (d < -Math.PI) d += TAU;
+    return d;
+  }
+  function randInt(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+  function waveNumber() { return Math.floor(passed / WAVE_EVERY) + 1; }
+  function patternIndex() { return Math.min(PATTERNS.length - 1, waveNumber() - 1); }
+  function currentPattern() { return PATTERNS[patternIndex()]; }
+
+  function loadStore() {
+    try {
+      best = Math.max(0, parseInt(localStorage.getItem(BEST_KEY), 10) || 0);
+      muted = localStorage.getItem(MUTE_KEY) === '1';
+    } catch (e) {
+      best = 0;
+      muted = false;
+    }
+  }
+  function saveBest() {
+    try { localStorage.setItem(BEST_KEY, String(best)); } catch (e) { /* private mode */ }
+  }
+  function saveMute() {
+    try { localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); } catch (e) { /* private mode */ }
+  }
+
+  function unlockAudio() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    if (!actx) {
+      try {
+        actx = new AC();
+        master = actx.createGain();
+        master.gain.value = muted ? 0 : 0.85;
+        master.connect(actx.destination);
+        music = actx.createGain();
+        music.gain.value = 0.9;
+        music.connect(master);
+      } catch (e) {
+        actx = null;
+        return;
+      }
+    }
+    if (actx.state === 'suspended') actx.resume();
+    applyMute();
+  }
+  function applyMute() {
+    if (master && actx) master.gain.setValueAtTime(muted ? 0 : 0.85, actx.currentTime);
+    btnMute.textContent = muted ? 'Sound' : 'Mute';
+    btnMute.setAttribute('aria-pressed', muted ? 'true' : 'false');
+    btnMute.setAttribute('aria-label', muted ? 'Unmute' : 'Mute');
+  }
+  function toggleMute() {
+    muted = !muted;
+    saveMute();
+    unlockAudio();
+    applyMute();
+    sfxUi();
+  }
+  function tone(freq, when, dur, type, gain, dest, slide) {
+    if (!actx || muted || !master) return;
+    try {
+      const o = actx.createOscillator();
+      const g = actx.createGain();
+      o.type = type || 'sine';
+      o.frequency.setValueAtTime(Math.max(40, freq), when);
+      if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, slide), when + dur);
+      g.gain.setValueAtTime(Math.max(0.0001, gain), when);
+      g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+      o.connect(g);
+      g.connect(dest || master);
+      o.start(when);
+      o.stop(when + dur + 0.03);
+    } catch (e) { /* audio device busy */ }
+  }
+  function noise(when, dur, gain, freq) {
+    if (!actx || muted || !master) return;
+    try {
+      const length = Math.max(1, Math.floor(actx.sampleRate * dur));
+      const buffer = actx.createBuffer(1, length, actx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < length; i++) {
+        const env = 1 - i / length;
+        data[i] = (Math.random() * 2 - 1) * env * env;
+      }
+      const src = actx.createBufferSource();
+      src.buffer = buffer;
+      const filter = actx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.setValueAtTime(freq, when);
+      const g = actx.createGain();
+      g.gain.setValueAtTime(gain, when);
+      g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+      src.connect(filter);
+      filter.connect(g);
+      g.connect(master);
+      src.start(when);
+      src.stop(when + dur + 0.02);
+    } catch (e) { /* ignore */ }
+  }
+  function sfxUi() {
+    if (!actx) return;
+    tone(620, actx.currentTime, 0.05, 'sine', 0.04, master);
+  }
+  function sfxStart() {
+    if (!actx) return;
+    const t = actx.currentTime;
+    tone(392, t, 0.12, 'triangle', 0.06, master, 523.25);
+    tone(659.25, t + 0.09, 0.16, 'sine', 0.05, master);
+  }
+  function sfxPass(near) {
+    if (!actx) return;
+    const t = actx.currentTime;
+    const f = NOTES[(passed) % NOTES.length];
+    tone(f, t, 0.09, 'sine', near ? 0.07 : 0.055, master, f * 1.02);
+    if (near) tone(f * 1.5, t + 0.03, 0.12, 'triangle', 0.045, master, f * 1.8);
+  }
+  function sfxHit() {
+    if (!actx) return;
+    const t = actx.currentTime;
+    noise(t, 0.28, 0.5, 280);
+    tone(196, t, 0.26, 'sine', 0.16, master, 48);
+    tone(90, t, 0.32, 'triangle', 0.1, master, 40);
+  }
+  function sfxOver() {
+    if (!actx) return;
+    const t = actx.currentTime;
+    [493.88, 369.99, 293.66, 196].forEach(function (f, i) {
+      tone(f, t + i * 0.13, 0.28, 'sine', 0.07, master);
+    });
+  }
+  function sfxWave() {
+    if (!actx) return;
+    const t = actx.currentTime;
+    tone(523.25, t, 0.1, 'triangle', 0.05, master);
+    tone(784, t + 0.08, 0.16, 'sine', 0.05, master);
+  }
+  function sfxBest() {
+    if (!actx) return;
+    const t = actx.currentTime;
+    [659.25, 880, 1174.66].forEach(function (f, i) {
+      tone(f, t + i * 0.07, 0.16, 'triangle', 0.05, master);
+    });
+  }
+  function tickMusic() {
+    if (!actx || mode !== 'playing') {
+      nextNote = 0;
+      return;
+    }
+    if (muted) return;
+    const t = actx.currentTime;
+    if (!nextNote || nextNote < t - 0.05) nextNote = t + 0.04;
+    const tempo = Math.max(0.16, 0.36 - (patternIndex()) * 0.02);
+    let guard = 0;
+    while (nextNote < t + 0.24 && guard++ < 4) {
+      const f = DRONE[noteStep % DRONE.length];
+      tone(f, nextNote, 0.2, 'sine', 0.035, music);
+      if (noteStep % 4 === 0) tone(f / 2, nextNote, 0.28, 'triangle', 0.02, music);
+      nextNote += tempo;
+      noteStep++;
+    }
+  }
+
+  function keyDir() {
+    const left = keys.has('arrowleft') || keys.has('a');
+    const right = keys.has('arrowright') || keys.has('d');
+    if (left && right) return lastKeyDir || 0;
+    if (left) return -1;
+    if (right) return 1;
+    return 0;
+  }
+  function steer() {
+    const k = keyDir();
+    if (k) return k;
+    return pointerDir;
+  }
+  function syncPtr() {
+    if (!pointers.size) { pointerDir = 0; return; }
+    let v = 0;
+    pointers.forEach(function (val) { v = val; });
+    pointerDir = v;
+  }
+
+  function visibleOuter() {
+    return Math.min(w, h) * 0.5 / scale - 8;
+  }
+  function firstInner() {
+    const vis = visibleOuter();
+    const minR = PLAYER_R + 136;
+    const prefer = PLAYER_R + 214;
+    if (vis - 18 < minR) return minR;
+    return Math.min(prefer, vis - 18);
+  }
+  function neededSpacing(travelSides, prevThick) {
+    const travel = travelSides * SIDE;
+    const rate = SHIFT_SPEED * 0.86;
+    const needTime = (travel > 0 ? travel / rate : 0) + SHIFT_SPEED / PLAYER_ACCEL + 0.12;
+    const plan = Math.max(wallSpeed, targetSpeed);
+    return needTime * plan + prevThick + HIT_R * 2 + 12;
+  }
+  function spawnNext() {
+    const pat = currentPattern();
+    const prev = walls.length ? walls[walls.length - 1] : null;
+    const prevThick = prev ? prev.thick : pat.thick;
+    let sides = pat.step;
+    const cap = pat.spacing * 1.62;
+    while (sides > 0 && neededSpacing(sides, prevThick) > cap) sides--;
+    const spacing = Math.max(pat.spacing, Math.ceil(neededSpacing(sides, prevThick)));
+    let start;
+    if (!prev) start = randInt(0, SIDES - 1);
+    else if (sides === 0) start = prev.startSide;
+    else if (pat.swing) {
+      swingSign *= -1;
+      start = mod(prev.startSide + swingSign * sides, SIDES);
+    } else start = mod(prev.startSide + helixDir * sides, SIDES);
+    const inner = prev ? prev.r + spacing : firstInner();
+    walls.push({
+      r: inner,
+      thick: pat.thick,
+      startSide: start,
+      gapSides: pat.gap,
+      hue: pat.hue,
+      scored: false
+    });
+  }
+  function fillWalls() {
+    let guard = 0;
+    const limit = Math.max(visibleOuter() + 36, PLAYER_R + 380);
+    while (guard++ < 16) {
+      const last = walls[walls.length - 1];
+      if (last && last.r > limit) break;
+      spawnNext();
+    }
+  }
+  function gapCenter(wall) {
+    return norm(wall.startSide * SIDE + wall.gapSides * SIDE * 0.5 + spin);
+  }
+  function nearestApproach() {
+    let hold = null;
+    let approach = null;
+    const p0 = PLAYER_R - HIT_R;
+    const p1 = PLAYER_R + HIT_R;
+    for (let i = 0; i < walls.length; i++) {
+      const wall = walls[i];
+      const near = wall.r;
+      const far = wall.r + wall.thick;
+      if (far >= p0 && near <= p1) { hold = wall; break; }
+      if (far >= p0 && (!approach || wall.r < approach.r)) approach = wall;
+    }
+    return hold || approach || walls[0] || null;
+  }
+  function safeAt(angle, wall) {
+    const local = norm(angle - spin);
+    const start = wall.startSide * SIDE - GRACE;
+    const len = wall.gapSides * SIDE + GRACE * 2;
+    return norm(local - start) <= len + 1e-6;
+  }
+  function edgeDistance(angle, wall) {
+    const local = norm(angle - spin);
+    const start = wall.startSide * SIDE;
+    const len = wall.gapSides * SIDE;
+    const d = norm(local - start);
+    if (d <= len) return Math.min(d, len - d);
+    return Math.min(d - len, TAU - d);
+  }
+
+  function burst(x, y, count, speed, hue, life) {
+    const n = reduceMotion ? Math.ceil(count * 0.45) : count;
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * TAU;
+      const v = speed * (0.35 + Math.random() * 0.75);
+      particles.push({
+        x: x,
+        y: y,
+        vx: Math.cos(a) * v,
+        vy: Math.sin(a) * v,
+        g: 0,
+        life: life * (0.65 + Math.random() * 0.5),
+        max: life,
+        size: 1.4 + Math.random() * 2.4,
+        hue: hue
+      });
+    }
+    if (particles.length > 240) particles.splice(0, particles.length - 240);
+  }
+  function addTrauma(v) { trauma = Math.min(1, trauma + (reduceMotion ? v * 0.35 : v)); }
+  function addFlash(amount, color) {
+    flash = Math.min(1, Math.max(flash, amount));
+    flashColor = color;
+  }
+  function addFloater(text, color) {
+    const a = player.angle;
+    floaters.push({
+      text: text,
+      x: Math.cos(a) * (PLAYER_R + 26),
+      y: Math.sin(a) * (PLAYER_R + 26),
+      vy: -22,
+      life: 0.8,
+      max: 0.8,
+      color: color
+    });
+    if (floaters.length > 10) floaters.shift();
+  }
+
+  function updateHud() {
+    hudScore.textContent = String(score);
+    hudBest.textContent = String(best);
+    hudScore.classList.toggle('hot', mode === 'playing' && score > best && score > 0);
+    hudBest.classList.toggle('hot', newBest && mode === 'over');
+    const pat = currentPattern();
+    const wave = waveNumber();
+    hudWave.textContent = pat.name;
+    hudWaveLbl.textContent = 'Wave ' + wave;
+    hudGates.textContent = String(passed);
+    hudChain.textContent = chain > 0 ? '×' + chain : '–';
+    menuBest.textContent = String(best);
+    const into = passed % WAVE_EVERY;
+    const lights = into === 0 && passed > 0 && banner.life > 0.4 ? WAVE_EVERY : into;
+    for (let i = 0; i < pipNodes.length; i++) pipNodes[i].classList.toggle('on', i < lights);
+    const hint = hintTime > 0 && mode === 'playing' ? hintShown : '';
+    hintEl.hidden = !hint;
+    if (hint) hintEl.textContent = hint;
+  }
+  function setMode(next) {
+    mode = next;
+    document.body.dataset.mode = next;
+    overlay.hidden = next === 'playing';
+    screenMenu.hidden = next !== 'menu';
+    screenPause.hidden = next !== 'paused';
+    screenOver.hidden = next !== 'over';
+    btnPause.textContent = next === 'paused' ? 'Resume' : 'Pause';
+    if (next !== 'playing') {
+      hintEl.hidden = true;
+    }
+    updateHud();
+  }
+  function refreshHint() {
+    if (hintTime <= 0) { hintShown = ''; return; }
+    if (passed < WAVE_EVERY) hintShown = 'Ride the turn. Tap when the gate shifts.';
+    else hintShown = 'Tap toward the next gate, then release.';
+  }
+
+  function resetWorld() {
+    score = 0;
+    passed = 0;
+    chain = 0;
+    bestChain = 0;
+    newBest = false;
+    spin = Math.random() * TAU;
+    spinVel = 0;
+    targetSpin = PATTERNS[0].spin;
+    wallSpeed = PATTERNS[0].speed;
+    targetSpeed = PATTERNS[0].speed;
+    helixDir = 1;
+    swingSign = 1;
+    walls = [];
+    particles = [];
+    floaters = [];
+    shocks = [];
+    trail = [];
+    trauma = 0;
+    flash = 0;
+    runTime = 0;
+    player.vel = 0;
+    banner = { text: 'DAWN', life: 1.7 };
+    hintTime = 6.5;
+    fillWalls();
+    const first = nearestApproach();
+    player.angle = first ? gapCenter(first) : 0;
+    refreshHint();
+  }
+  function startGame() {
+    unlockAudio();
+    resetWorld();
+    setMode('playing');
+    sfxStart();
+    updateHud();
+  }
+  function pauseOnly() {
+    if (mode !== 'playing') return;
+    keys.clear();
+    pointers.clear();
+    lockedPtrs.clear();
+    pointerDir = 0;
+    setMode('paused');
+  }
+  function togglePause() {
+    if (mode === 'playing') {
+      pauseOnly();
+      sfxUi();
+    } else if (mode === 'paused') {
+      setMode('playing');
+      sfxUi();
+    }
+  }
+  function onWave(waveNo) {
+    const idx = Math.min(PATTERNS.length - 1, waveNo - 1);
+    const pat = PATTERNS[idx];
+    if (waveNo - 1 < PATTERNS.length) {
+      targetSpin = pat.spin;
+      targetSpeed = pat.speed;
+      helixDir = pat.spin < 0 ? -1 : 1;
+      swingSign = 1;
+      banner.text = pat.name;
+    } else {
+      helixDir *= -1;
+      targetSpin = Math.abs(PATTERNS[PATTERNS.length - 1].spin) * helixDir;
+      targetSpeed = PATTERNS[PATTERNS.length - 1].speed;
+      banner.text = pat.name + ' ' + waveNo;
+    }
+    banner.life = 1.55;
+    hintTime = Math.max(hintTime, 2.3);
+    addFlash(0.18, '255, 220, 170');
+    sfxWave();
+  }
+  function onPass(wall) {
+    const dist = edgeDistance(player.angle, wall);
+    const near = dist < 0.3;
+    if (near) {
+      chain += 1;
+      if (chain > bestChain) bestChain = chain;
+    } else chain = 0;
+    const waveNo = waveNumber();
+    const bonus = near ? 15 + Math.min(chain, 12) * 5 : 0;
+    const pts = 10 * waveNo + bonus;
+    score += pts;
+    const before = Math.floor(passed / WAVE_EVERY);
+    passed += 1;
+    const after = Math.floor(passed / WAVE_EVERY);
+    const px = Math.cos(player.angle) * PLAYER_R;
+    const py = Math.sin(player.angle) * PLAYER_R;
+    burst(px, py, near ? 16 : 8, near ? 70 : 40, near ? 42 : wall.hue, 0.4);
+    addFloater(near ? '+' + pts + ' CLOSE' : '+' + pts, near ? '#fff6dd' : '#ffd9a0');
+    if (near) {
+      addTrauma(0.2);
+      addFlash(0.12, '255, 214, 150');
+    }
+    sfxPass(near);
+    if (after !== before) onWave(after + 1);
+    updateHud();
+  }
+  function onDeath() {
+    const px = Math.cos(player.angle) * PLAYER_R;
+    const py = Math.sin(player.angle) * PLAYER_R;
+    burst(px, py, 46, 160, 28, 0.75);
+    burst(0, 0, 18, 90, 40, 0.6);
+    shocks.push({ r: PLAYER_R * 0.4, vr: 420, life: 0.55, max: 0.55 });
+    addTrauma(1);
+    addFlash(0.92, '255, 236, 214');
+    sfxHit();
+    newBest = score > best;
+    if (newBest) {
+      best = score;
+      saveBest();
+      sfxBest();
+    }
+    sfxOver();
+    overScore.textContent = String(score);
+    overBest.textContent = String(best);
+    overGates.textContent = String(passed);
+    overChain.textContent = String(bestChain);
+    overNew.hidden = !newBest;
+    setMode('over');
+  }
+
+  function stepSim(dt) {
+    const desired = spinVel + steer() * SHIFT_SPEED;
+    player.vel += clamp(desired - player.vel, -PLAYER_ACCEL * dt, PLAYER_ACCEL * dt);
+    player.angle = norm(player.angle + player.vel * dt);
+
+    spinVel += clamp(targetSpin - spinVel, -SPIN_ACC * dt, SPIN_ACC * dt);
+    spin = norm(spin + spinVel * dt);
+    wallSpeed += clamp(targetSpeed - wallSpeed, -SPEED_ACC * dt, SPEED_ACC * dt);
+
+    for (let i = 0; i < walls.length; i++) walls[i].r -= wallSpeed * dt;
+
+    const p0 = PLAYER_R - HIT_R;
+    const p1 = PLAYER_R + HIT_R;
+    const cleared = [];
+    for (let i = 0; i < walls.length; i++) {
+      const wall = walls[i];
+      const near = wall.r;
+      const far = wall.r + wall.thick;
+      if (far >= p0 && near <= p1) {
+        if (!safeAt(player.angle, wall)) {
+          onDeath();
+          return;
+        }
+      } else if (!wall.scored && far < p0) {
+        wall.scored = true;
+        cleared.push(wall);
+      }
+    }
+    for (let i = 0; i < cleared.length; i++) onPass(cleared[i]);
+    if (mode !== 'playing') return;
+    walls = walls.filter(function (wall) { return wall.r > 18; });
+    fillWalls();
+  }
+  function simulateFrame(dt) {
+    const slices = Math.max(1, Math.ceil(dt / (1 / 120)));
+    const h = dt / slices;
+    for (let i = 0; i < slices; i++) {
+      stepSim(h);
+      if (mode !== 'playing') break;
+    }
+  }
+  function updateFx(dt) {
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.life -= dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+    for (let i = floaters.length - 1; i >= 0; i--) {
+      const f = floaters[i];
+      f.life -= dt;
+      f.y += f.vy * dt;
+      if (f.life <= 0) floaters.splice(i, 1);
+    }
+    for (let i = shocks.length - 1; i >= 0; i--) {
+      const s = shocks[i];
+      s.life -= dt;
+      s.r += s.vr * dt;
+      if (s.life <= 0) shocks.splice(i, 1);
+    }
+    trauma = Math.max(0, trauma - dt * 1.65);
+    flash = Math.max(0, flash - dt * 1.7);
+    if (banner.life > 0) banner.life -= dt;
+    if (mode === 'playing' && hintTime > 0) {
+      hintTime -= dt;
+      refreshHint();
+    }
+  }
+
+  function makeStars() {
+    stars = [];
+    const count = clamp(Math.floor((w * h) / 16000), 28, 120);
+    for (let i = 0; i < count; i++) {
+      stars.push({
+        x: (Math.random() - 0.5) * w,
+        y: (Math.random() - 0.5) * h,
+        r: Math.random() * 1.3 + 0.3,
+        a: Math.random() * 0.45 + 0.12,
+        tw: Math.random() * TAU
+      });
+    }
+  }
+  function resizeCanvas() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = Math.max(1, window.innerWidth);
+    h = Math.max(1, window.innerHeight);
+    canvas.width = Math.floor(w * dpr);
+    canvas.height = Math.floor(h * dpr);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    scale = clamp(Math.min(w, h) / 1480, 0.46, 1.15);
+    makeStars();
+  }
+
+  function drawBackground() {
+    const g = ctx.createRadialGradient(w * 0.5, h * 0.48, 20, w * 0.5, h * 0.5, Math.max(w, h) * 0.72);
+    g.addColorStop(0, '#221428');
+    g.addColorStop(0.42, '#120c18');
+    g.addColorStop(1, '#07060d');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  }
+  function drawPlate(wall, worldSpin) {
+    if (wall.r < 8 || wall.thick <= 0) return;
+    const gapStart = wall.startSide * SIDE + worldSpin;
+    const gapLen = wall.gapSides * SIDE;
+    const blockedStart = gapStart + gapLen;
+    const blockedLen = TAU - gapLen;
+    const r0 = wall.r;
+    const r1 = wall.r + wall.thick;
+    ctx.beginPath();
+    ctx.arc(0, 0, r1, blockedStart, blockedStart + blockedLen, false);
+    ctx.arc(0, 0, r0, blockedStart + blockedLen, blockedStart, true);
+    ctx.closePath();
+    const grad = ctx.createRadialGradient(0, 0, r0, 0, 0, r1);
+    grad.addColorStop(0, 'hsla(' + wall.hue + ', 90%, 72%, 0.95)');
+    grad.addColorStop(0.18, 'hsla(' + wall.hue + ', 55%, 18%, 0.96)');
+    grad.addColorStop(1, 'hsla(' + wall.hue + ', 40%, 8%, 0.94)');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.lineWidth = 2.4;
+    ctx.strokeStyle = 'hsla(' + wall.hue + ', 100%, 74%, 0.9)';
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, r0 + 1.4, blockedStart, blockedStart + blockedLen, false);
+    ctx.strokeStyle = 'rgba(255, 246, 230, 0.92)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  function drawBeam(wall, worldSpin, reach) {
+    if (reach < 70 || wall.r < 8) return;
+    const a0 = wall.startSide * SIDE + worldSpin;
+    const a1 = a0 + wall.gapSides * SIDE;
+    ctx.beginPath();
+    ctx.arc(0, 0, reach, a0, a1, false);
+    ctx.arc(0, 0, 62, a1, a0, true);
+    ctx.closePath();
+    const grad = ctx.createRadialGradient(0, 0, 50, 0, 0, reach);
+    grad.addColorStop(0, 'hsla(' + wall.hue + ', 100%, 72%, 0.05)');
+    grad.addColorStop(0.7, 'hsla(' + wall.hue + ', 100%, 68%, 0.16)');
+    grad.addColorStop(1, 'hsla(' + wall.hue + ', 100%, 70%, 0)');
+    ctx.fillStyle = grad;
+    ctx.fill();
+  }
+  function drawCore(worldSpin, pulse) {
+    const r = 58 * pulse;
+    ctx.save();
+    ctx.globalAlpha = 0.28 + Math.sin(clock * 2.2) * 0.05;
+    ctx.strokeStyle = 'rgba(255, 196, 120, 0.7)';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < SIDES; i++) {
+      const a = worldSpin + (i + 0.5) * SIDE;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * (r + 8), Math.sin(a) * (r + 8));
+      ctx.lineTo(Math.cos(a) * (r + 78), Math.sin(a) * (r + 78));
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    ctx.beginPath();
+    for (let i = 0; i <= SIDES; i++) {
+      const a = worldSpin + i * SIDE;
+      const x = Math.cos(a) * r;
+      const y = Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    const grad = ctx.createRadialGradient(-8, -10, 6, 0, 0, r);
+    grad.addColorStop(0, '#fffaf0');
+    grad.addColorStop(0.42, '#ffc56a');
+    grad.addColorStop(1, '#e85a28');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(255, 248, 230, 0.9)';
+    ctx.stroke();
+
+    ctx.beginPath();
+    for (let i = 0; i <= SIDES; i++) {
+      const a = worldSpin + i * SIDE + SIDE * 0.5;
+      const x = Math.cos(a) * r * 0.42;
+      const y = Math.sin(a) * r * 0.42;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(255, 250, 240, 0.92)';
+    ctx.fill();
+  }
+  function drawOrbitMarks(worldSpin) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 214, 160, 0.22)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.arc(0, 0, PLAYER_R, 0, TAU);
+    ctx.stroke();
+    for (let i = 0; i < SIDES; i++) {
+      const a = worldSpin + i * SIDE;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * (PLAYER_R - 8), Math.sin(a) * (PLAYER_R - 8));
+      ctx.lineTo(Math.cos(a) * (PLAYER_R + 8), Math.sin(a) * (PLAYER_R + 8));
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function drawSpark(angle, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    const x = Math.cos(angle) * PLAYER_R;
+    const y = Math.sin(angle) * PLAYER_R;
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    const glow = ctx.createRadialGradient(0, 0, 1, 0, 0, 20);
+    glow.addColorStop(0, 'rgba(255, 250, 236, 0.95)');
+    glow.addColorStop(1, 'rgba(255, 170, 60, 0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(0, 0, 20, 0, TAU);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(13, 0);
+    ctx.lineTo(-9, 5.5);
+    ctx.lineTo(-4.5, 0);
+    ctx.lineTo(-9, -5.5);
+    ctx.closePath();
+    ctx.fillStyle = '#fffaf2';
+    ctx.strokeStyle = '#ffb03a';
+    ctx.lineWidth = 1.25;
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+  function drawTrail() {
+    for (let i = 0; i < trail.length; i++) {
+      const k = (i + 1) / trail.length;
+      const a = trail[i];
+      ctx.save();
+      ctx.globalAlpha = k * 0.4;
+      ctx.fillStyle = '#ffd7a2';
+      ctx.beginPath();
+      ctx.arc(Math.cos(a) * PLAYER_R, Math.sin(a) * PLAYER_R, 2.2 + k * 1.6, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+  function drawParticles() {
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      const alpha = Math.max(0, p.life / p.max);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = 'hsla(' + p.hue + ', 95%, 68%, 1)';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+  function drawShocks() {
+    for (let i = 0; i < shocks.length; i++) {
+      const s = shocks[i];
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, s.life / s.max) * 0.8;
+      ctx.strokeStyle = '#fff1d4';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, s.r, 0, TAU);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+  function drawFloaters() {
+    ctx.save();
+    ctx.font = '700 15px ui-sans-serif, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i < floaters.length; i++) {
+      const f = floaters[i];
+      ctx.globalAlpha = Math.max(0, f.life / f.max);
+      ctx.fillStyle = f.color;
+      ctx.fillText(f.text, f.x, f.y);
+    }
+    ctx.restore();
+  }
+  function drawChevron(worldSpinVel) {
+    if (Math.abs(worldSpinVel) < 0.08) return;
+    const dir = worldSpinVel > 0 ? 1 : -1;
+    ctx.save();
+    ctx.rotate(clock * dir * 0.8);
+    ctx.strokeStyle = 'rgba(255, 214, 160, 0.55)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, 74, -0.5, 0.7, dir < 0);
+    ctx.stroke();
+    const tip = dir > 0 ? 0.7 : -0.5;
+    const a = tip;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * 74, Math.sin(a) * 74);
+    ctx.lineTo(Math.cos(a - dir * 0.18) * 66, Math.sin(a - dir * 0.18) * 66);
+    ctx.lineTo(Math.cos(a - dir * 0.18) * 82, Math.sin(a - dir * 0.18) * 82);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function renderWorld(worldSpin, worldSpinVel, sparkAngle, showSpark) {
+    drawOrbitMarks(worldSpin);
+    const upcoming = walls.filter(function (wall) {
+      return wall.r + wall.thick > PLAYER_R - HIT_R;
+    }).sort(function (a, b) { return a.r - b.r; }).slice(0, 2);
+    for (let i = 0; i < upcoming.length; i++) {
+      ctx.save();
+      ctx.globalAlpha = i === 0 ? 1 : 0.55;
+      drawBeam(upcoming[i], worldSpin, upcoming[i].r + upcoming[i].thick + 28);
+      ctx.restore();
+    }
+    const ordered = walls.slice().sort(function (a, b) { return b.r - a.r; });
+    for (let i = 0; i < ordered.length; i++) drawPlate(ordered[i], worldSpin);
+    const pulse = 1 + Math.sin(clock * 2.5) * 0.035;
+    drawCore(worldSpin, pulse);
+    drawChevron(worldSpinVel);
+    drawTrail();
+    if (showSpark) drawSpark(sparkAngle, 1);
+    drawParticles();
+    drawShocks();
+    drawFloaters();
+  }
+  function renderAttract() {
+    const t = clock;
+    const demoSpin = t * 0.22;
+    drawOrbitMarks(demoSpin);
+    for (let i = 0; i < 3; i++) {
+      const wall = {
+        r: 168 + i * 96,
+        thick: 32,
+        startSide: (i * 2) % SIDES,
+        gapSides: 2,
+        hue: [36, 350, 204][i]
+      };
+      const ringSpin = demoSpin + i * 0.35;
+      drawBeam(wall, ringSpin, wall.r + wall.thick + 10);
+      drawPlate(wall, ringSpin);
+    }
+    drawCore(demoSpin, 1 + Math.sin(t * 2) * 0.03);
+    drawSpark(demoSpin * 0.65, 1);
+    drawParticles();
+  }
+  function render() {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawBackground();
+    const mag = trauma * trauma;
+    const amp = reduceMotion ? 4 : 16;
+    const sx = (Math.random() * 2 - 1) * amp * mag;
+    const sy = (Math.random() * 2 - 1) * amp * mag;
+    ctx.save();
+    ctx.translate(w * 0.5 + sx, h * 0.5 + sy);
+    for (let i = 0; i < stars.length; i++) {
+      const s = stars[i];
+      const tw = 0.65 + Math.sin(clock * 1.7 + s.tw) * 0.35;
+      ctx.globalAlpha = s.a * tw;
+      ctx.fillStyle = '#fff6e4';
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, TAU);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.scale(scale, scale);
+    if (mode === 'menu') renderAttract();
+    else renderWorld(spin, spinVel, player.angle, mode !== 'over');
+    ctx.restore();
+
+    if (banner.life > 0 && mode !== 'menu') {
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.globalAlpha = clamp(banner.life * 1.6, 0, 1);
+      ctx.fillStyle = '#ffe3b0';
+      ctx.font = '800 ' + Math.round(clamp(w * 0.045, 18, 32)) + 'px ui-sans-serif, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(banner.text, w * 0.5, Math.max(78, h * 0.16));
+      ctx.restore();
+    }
+    if (flash > 0) {
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.fillStyle = 'rgba(' + flashColor + ', ' + (flash * 0.48) + ')';
+      ctx.fillRect(0, 0, w, h);
+      ctx.restore();
+    }
+  }
+
+  function frame(ts) {
+    if (!frame.last) frame.last = ts;
+    let dt = (ts - frame.last) / 1000;
+    frame.last = ts;
+    if (!Number.isFinite(dt) || dt < 0) dt = 0;
+    dt = Math.min(dt, 0.05);
+    clock += dt;
+    if (mode === 'playing') {
+      runTime += dt;
+      simulateFrame(dt);
+      if (trail.length === 0 || angDelta(trail[trail.length - 1], player.angle) !== 0) {
+        trail.push(player.angle);
+        if (trail.length > 14) trail.shift();
+      }
+      if (Math.random() < dt * 5) {
+        const a = Math.random() * TAU;
+        const rr = 20 + Math.random() * 30;
+        particles.push({
+          x: Math.cos(a) * rr,
+          y: Math.sin(a) * rr,
+          vx: Math.cos(a) * 8,
+          vy: Math.sin(a) * 8,
+          life: 0.6,
+          max: 0.6,
+          size: 1.3,
+          hue: 38
+        });
+      }
+      updateFx(dt);
+      tickMusic();
+      if ((runTime * 4 | 0) !== (frame.hintTick | 0)) {
+        frame.hintTick = runTime * 4 | 0;
+        updateHud();
+      }
+    } else if (mode === 'over' || mode === 'menu') {
+      updateFx(dt);
+      if (mode === 'menu' && Math.random() < dt * 7) {
+        const a = Math.random() * TAU;
+        particles.push({
+          x: Math.cos(a) * 64,
+          y: Math.sin(a) * 64,
+          vx: Math.cos(a) * 14,
+          vy: Math.sin(a) * 14,
+          life: 0.8,
+          max: 0.8,
+          size: 1.5,
+          hue: 32 + Math.random() * 20
+        });
+      }
+    } else {
+      trauma = Math.max(0, trauma - dt * 1.4);
+      flash = Math.max(0, flash - dt);
+    }
+    render();
+    requestAnimationFrame(frame);
+  }
+  frame.last = 0;
+  frame.hintTick = 0;
+
+  function onKeyDown(e) {
+    const k = e.key.toLowerCase();
+    const onButton = e.target && e.target.closest && e.target.closest('button');
+    if (onButton && (k === ' ' || k === 'enter')) return;
+    const handled = ['arrowleft', 'arrowright', 'a', 'd', ' ', 'p', 'escape', 'm', 'r', 'enter'];
+    if (handled.indexOf(k) !== -1) e.preventDefault();
+    if (k === 'm') { toggleMute(); return; }
+    if (e.repeat) return;
+    if (k === 'arrowleft' || k === 'a' || k === 'arrowright' || k === 'd') {
+      keys.add(k);
+      if (k === 'arrowleft' || k === 'a') lastKeyDir = -1;
+      else lastKeyDir = 1;
+      return;
+    }
+    if (k === 'p' || k === 'escape') { togglePause(); return; }
+    if (k === 'r') {
+      if (mode === 'playing' || mode === 'paused' || mode === 'over') startGame();
+      return;
+    }
+    if (k === ' ' || k === 'enter') {
+      if (mode === 'menu' || mode === 'over') startGame();
+      else togglePause();
+    }
+  }
+  function onKeyUp(e) {
+    const k = e.key.toLowerCase();
+    keys.delete(k);
+  }
+  function bindHold(el, dir) {
+    el.addEventListener('pointerdown', function (e) {
+      if (mode !== 'playing') return;
+      e.preventDefault();
+      pointers.set(e.pointerId, dir);
+      lockedPtrs.add(e.pointerId);
+      syncPtr();
+    });
+  }
+
+  document.getElementById('btnStart').addEventListener('click', function () { startGame(); });
+  document.getElementById('btnAgain').addEventListener('click', function () { startGame(); });
+  document.getElementById('btnResume').addEventListener('click', function () { togglePause(); });
+  document.getElementById('btnPauseRestart').addEventListener('click', function () { startGame(); });
+  btnPause.addEventListener('click', function () { togglePause(); });
+  btnMute.addEventListener('click', function () { toggleMute(); });
+  bindHold(document.getElementById('btnLeft'), -1);
+  bindHold(document.getElementById('btnRight'), 1);
+
+  canvas.addEventListener('pointerdown', function (e) {
+    if (mode !== 'playing') return;
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    pointers.set(e.pointerId, (e.clientX - rect.left) < rect.width * 0.5 ? -1 : 1);
+    syncPtr();
+  });
+  window.addEventListener('pointermove', function (e) {
+    if (!pointers.has(e.pointerId) || lockedPtrs.has(e.pointerId)) return;
+    const rect = canvas.getBoundingClientRect();
+    pointers.set(e.pointerId, (e.clientX - rect.left) < rect.width * 0.5 ? -1 : 1);
+    syncPtr();
+  });
+  function clearPtr(e) {
+    pointers.delete(e.pointerId);
+    lockedPtrs.delete(e.pointerId);
+    syncPtr();
+  }
+  window.addEventListener('pointerup', clearPtr);
+  window.addEventListener('pointercancel', clearPtr);
+  window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('keyup', onKeyUp);
+  window.addEventListener('blur', function () {
+    keys.clear();
+    pointers.clear();
+    lockedPtrs.clear();
+    pointerDir = 0;
+    pauseOnly();
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) {
+      keys.clear();
+      pointers.clear();
+      lockedPtrs.clear();
+      pointerDir = 0;
+      pauseOnly();
+    }
+  });
+  window.addEventListener('resize', function () {
+    const dw = Math.abs(window.innerWidth - viewW);
+    const dh = Math.abs(window.innerHeight - viewH);
+    resizeCanvas();
+    viewW = window.innerWidth;
+    viewH = window.innerHeight;
+    if (mode === 'playing' && (dw > 80 || dh > 160)) pauseOnly();
+  });
+  window.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+  loadStore();
+  applyMute();
+  resizeCanvas();
+  viewW = window.innerWidth;
+  viewH = window.innerHeight;
+  setMode('menu');
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
