@@ -32,3 +32,4 @@ Open any file in a browser. Each game is a single HTML document and runs fully o
 | Kiln Mosaic | [games/game-006-kiln-mosaic.html](games/game-006-kiln-mosaic.html) | Stamp clay onto a 10×10 grate, fire full rows and columns, and chain a Fire streak. From Heat 2, one stamp in each set is gilt. Keyboard, drag, and tap controls, pause on blur or resize, synthesized sound with mute, and a saved best score. |
 | Silverlock | [games/game-006-silverlock.html](games/game-006-silverlock.html) | Adds Silverlock as a single self-contained file at `games/game-006-silverlock.html`. It is a fully offline pipe-lock puzzle: all graphics are canvas-drawn and all sounds are synthesized with the Web Audio API. |
 | Vesper Quill | [games/game-006-vesper-quill.html](games/game-006-vesper-quill.html) | Add Vesper Quill, an offline dusk-dial game |
+| Nectar Putt | [games/game-006-nectar-putt.html](games/game-006-nectar-putt.html) | Add Nectar Putt, an offline miniature golf round |
