@@ -34,3 +34,4 @@ Open any file in a browser. Each game is a single HTML document and runs fully o
 | Vesper Quill | [games/game-006-vesper-quill.html](games/game-006-vesper-quill.html) | Add Vesper Quill, an offline dusk-dial game |
 | Nectar Putt | [games/game-006-nectar-putt.html](games/game-006-nectar-putt.html) | Add Nectar Putt, an offline miniature golf round |
 | Lumen Quarry | [games/game-006-lumen-quarry.html](games/game-006-lumen-quarry.html) | Adds games/game-006-lumen-quarry.html, a self-contained offline minesweeper. |
+| Halo Loom | [games/game-006-halo-loom.html](games/game-006-halo-loom.html) | Add Halo Loom, an offline stained-glass match-3 |
