@@ -1,0 +1,2058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#070910">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src 'none'; media-src 'none';">
+<title>Lumen Quarry</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23070910'/%3E%3Cpath d='M16 5c2 4 2 6 0 8c-2-2-2-4 0-8z' fill='%23ffd27a'/%3E%3Crect x='13' y='13' width='6' height='12' rx='2' fill='%23f0c27a'/%3E%3C/svg%3E">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #070910;
+    --ink: #f4efe4;
+    --dim: #b3ab9e;
+    --gold: #f0c27a;
+    --teal: #7eeadc;
+    --rose: #ff6b81;
+    --line: rgba(240, 194, 122, 0.38);
+    --font: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font);
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+  [hidden] { display: none !important; }
+  button, kbd { font-family: inherit; }
+  button { -webkit-tap-highlight-color: transparent; }
+  #app {
+    height: 100%;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    padding:
+      env(safe-area-inset-top)
+      env(safe-area-inset-right)
+      env(safe-area-inset-bottom)
+      env(safe-area-inset-left);
+    background:
+      radial-gradient(900px 480px at 50% -10%, rgba(90, 120, 170, 0.28), transparent 60%),
+      radial-gradient(700px 420px at 110% 110%, rgba(120, 64, 32, 0.22), transparent 55%),
+      var(--bg);
+  }
+  #hud {
+    flex: none;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
+    min-height: 58px;
+    padding: 8px 12px 6px;
+  }
+  .stat { min-width: 58px; }
+  .stat .lbl {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    font-weight: 700;
+    color: var(--dim);
+  }
+  .stat b {
+    display: block;
+    font-size: 20px;
+    line-height: 1.05;
+    font-variant-numeric: tabular-nums;
+    color: var(--gold);
+  }
+  #mines.bad { color: var(--rose); }
+  .pips { display: flex; gap: 4px; align-items: flex-end; height: 22px; }
+  .pips i {
+    width: 9px;
+    height: 14px;
+    border-radius: 5px 5px 6px 6px;
+    background: #232833;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
+  .pips i.on {
+    background: radial-gradient(circle at 50% 28%, #fff 0, #ffe1a4 36%, #ff8a3d 78%);
+    box-shadow: 0 0 8px rgba(255, 176, 90, 0.85);
+  }
+  .spacer { flex: 1; }
+  .hudbtn, .ghost, .primary {
+    border: 1px solid var(--line);
+    background: rgba(12, 14, 22, 0.72);
+    color: var(--ink);
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+  }
+  .hudbtn { padding: 7px 12px; }
+  .hudbtn[aria-pressed="true"] {
+    background: rgba(255, 107, 129, 0.18);
+    border-color: rgba(255, 107, 129, 0.7);
+    color: #ffd0d6;
+  }
+  .hudbtn:disabled { opacity: 0.4; cursor: default; }
+  #stage {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    margin: 0 10px;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(240, 194, 122, 0.18),
+      0 20px 60px rgba(0, 0, 0, 0.35),
+      inset 0 0 80px rgba(0, 0, 0, 0.25);
+  }
+  canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
+    cursor: crosshair;
+  }
+  #flash {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: #fff6e8;
+    opacity: 0;
+    mix-blend-mode: screen;
+  }
+  #banner {
+    position: absolute;
+    left: 50%;
+    top: 18%;
+    transform: translateX(-50%);
+    text-align: center;
+    pointer-events: none;
+    text-shadow: 0 8px 28px rgba(0, 0, 0, 0.65);
+    width: min(92%, 440px);
+  }
+  #banner[hidden] { display: none !important; }
+  #banner h2 {
+    margin: 0;
+    font-size: clamp(28px, 6vw, 52px);
+    letter-spacing: 0.08em;
+    color: var(--gold);
+  }
+  #banner p { margin: 4px 0; color: var(--ink); }
+  #touchbar {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px 12px;
+  }
+  #btnFlag {
+    flex: none;
+    min-width: 108px;
+    min-height: 46px;
+  }
+  #btnFlag[aria-pressed="true"] {
+    background: linear-gradient(180deg, #ffd89a, #e0a04a);
+    color: #2a1608;
+    border-color: transparent;
+  }
+  #touchHint {
+    margin: 0;
+    color: var(--dim);
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(5, 7, 12, 0.62);
+    backdrop-filter: blur(6px);
+    z-index: 4;
+  }
+  .overlay.show { display: flex; }
+  .card {
+    width: min(520px, 100%);
+    max-height: 100%;
+    overflow: auto;
+    padding: 16px 18px 14px;
+    border-radius: 20px;
+    background:
+      linear-gradient(180deg, rgba(32, 36, 48, 0.96), rgba(12, 14, 20, 0.96));
+    border: 1px solid var(--line);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+  .eyebrow {
+    margin: 0 0 4px;
+    letter-spacing: 0.2em;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--teal);
+  }
+  h1 {
+    margin: 0 0 4px;
+    font-size: clamp(28px, 6vw, 44px);
+    letter-spacing: 0.04em;
+    line-height: 0.95;
+  }
+  h1 span { color: var(--gold); }
+  h2 { margin: 0 0 8px; letter-spacing: 0.08em; }
+  .tag, .note { color: var(--dim); line-height: 1.45; }
+  .help { margin: 8px 0; padding: 0; list-style: none; }
+  .help li { margin: 3px 0; color: var(--ink); font-size: 13.5px; line-height: 1.35; }
+  .help b { color: var(--gold); }
+  kbd {
+    display: inline-block;
+    min-width: 1.3em;
+    padding: 0.05em 0.38em;
+    margin: 0 1px;
+    border-radius: 6px;
+    border: 1px solid rgba(240, 194, 122, 0.45);
+    background: rgba(0, 0, 0, 0.35);
+    box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.35);
+    font-size: 0.86em;
+    font-weight: 700;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+  .primary {
+    background: linear-gradient(180deg, #ffe3ad, #e3a84a);
+    color: #2a1608;
+    border-color: transparent;
+    padding: 12px 22px;
+    font-size: 15px;
+    box-shadow: 0 8px 24px rgba(227, 168, 74, 0.28);
+  }
+  .primary:focus-visible, .ghost:focus-visible, .hudbtn:focus-visible {
+    outline: 2px solid var(--teal);
+    outline-offset: 2px;
+  }
+  .bestline { margin: 8px 0 0; color: var(--dim); letter-spacing: 0.08em; }
+  .bestline strong, .bigscore {
+    color: var(--gold);
+    font-variant-numeric: tabular-nums;
+  }
+  .bigscore {
+    margin: 4px 0;
+    font-size: 42px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .newbest {
+    display: inline-block;
+    margin: 0;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(126, 234, 220, 0.16);
+    color: var(--teal);
+    letter-spacing: 0.14em;
+    font-size: 12px;
+    font-weight: 800;
+  }
+  .danger { color: var(--rose); }
+  @media (max-width: 640px) {
+    .stat b { font-size: 16px; }
+    .help li { font-size: 13px; }
+    #touchHint { font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="hud">
+    <div class="stat" aria-label="Score"><span class="lbl">SCORE</span><b id="score">0</b></div>
+    <div class="stat" aria-label="Best score"><span class="lbl">BEST</span><b id="best">0</b></div>
+    <div class="stat" aria-label="Depth"><span class="lbl">DEPTH</span><b id="level">1</b></div>
+    <div class="stat" aria-label="Charges left"><span class="lbl">CHARGES</span><b id="mines">0</b></div>
+    <div class="stat" aria-label="Time"><span class="lbl">TIME</span><b id="time">0</b></div>
+    <div class="stat" aria-label="Lives"><span class="lbl">LANTERNS</span><div id="lives" class="pips"></div></div>
+    <div class="spacer"></div>
+    <button id="btnMute" class="hudbtn" type="button" aria-label="Mute sound" aria-pressed="false">SFX</button>
+    <button id="btnPause" class="hudbtn" type="button" aria-label="Pause" disabled>PAUSE</button>
+  </header>
+  <div id="stage">
+    <canvas id="c" width="640" height="640" aria-label="Lumen Quarry board"></canvas>
+    <div id="flash"></div>
+    <div id="banner" hidden>
+      <p class="eyebrow" id="bannerKicker">VEIN CLEARED</p>
+      <h2 id="bannerTitle">GROTTO</h2>
+      <p id="bannerSub">Tap or press Enter to delve</p>
+    </div>
+    <section id="screen-menu" class="overlay show" role="dialog" aria-labelledby="title">
+      <div class="card">
+        <p class="eyebrow">OFFLINE PUZZLE</p>
+        <h1 id="title">LUMEN <span>QUARRY</span></h1>
+        <p class="tag">Peel the dark stone. Mark every buried charge. Delve until a lantern goes out.</p>
+        <ul class="help">
+          <li><b>Dig</b> — click, tap, or <kbd>Space</kbd> / <kbd>Enter</kbd> on the cursor. The first dig of a vein is always a safe cavern.</li>
+          <li><b>Cursor</b> — <kbd>Arrows</kbd> or <kbd>WASD</kbd>.</li>
+          <li><b>Flag</b> — right-click, long-press, <kbd>F</kbd>, or the FLAG control. Flags mark charges. Dig will not open a flag.</li>
+          <li><b>Chord</b> — when the flags around a number match it, double-click, double-tap, middle-click, or press <kbd>C</kbd> to open the rest. A wrong flag strikes a charge.</li>
+          <li><b>Lanterns</b> — three to start. A strike defuses that charge and spends a lantern. Every third cleared vein restores one, up to five.</li>
+          <li><b>Pause</b> — <kbd>P</kbd> or <kbd>Esc</kbd>. Leaving the window, hiding the tab, or resizing also pauses. <b>Mute</b> — <kbd>M</kbd>. <b>Restart</b> — <kbd>R</kbd> from pause or game over.</li>
+          <li>Every vein is logically solvable. Deeper veins are larger and denser. Your best score is saved on this device.</li>
+        </ul>
+        <div class="row">
+          <button id="playBtn" class="primary" type="button">PLAY</button>
+          <span class="bestline">BEST <strong id="menuBest">0</strong></span>
+        </div>
+      </div>
+    </section>
+    <section id="screen-pause" class="overlay" role="dialog" aria-labelledby="pauseTitle">
+      <div class="card">
+        <p class="eyebrow">LANTERN LOW</p>
+        <h2 id="pauseTitle">PAUSED</h2>
+        <p class="note" id="pauseNote">The quarry waits.</p>
+        <ul class="help">
+          <li><kbd>Arrows</kbd> <kbd>WASD</kbd> move · <kbd>Space</kbd> dig · <kbd>F</kbd> flag · <kbd>C</kbd> chord</li>
+          <li><kbd>Enter</kbd> <kbd>P</kbd> <kbd>Esc</kbd> resume · <kbd>M</kbd> mute · <kbd>R</kbd> restart</li>
+        </ul>
+        <div class="row">
+          <button id="resumeBtn" class="primary" type="button">RESUME</button>
+          <button id="pauseRestart" class="ghost" type="button">RESTART</button>
+          <button id="pauseMenu" class="ghost" type="button">MENU</button>
+        </div>
+      </div>
+    </section>
+    <section id="screen-over" class="overlay" role="dialog" aria-labelledby="overTitle">
+      <div class="card">
+        <p class="eyebrow">THE LANTERN DIES</p>
+        <p id="newBest" class="newbest" hidden>NEW BEST</p>
+        <h2 id="overTitle" class="danger">COLLAPSE</h2>
+        <p class="bigscore" id="finalScore">0</p>
+        <p class="tag" id="overDetail">Depth 1</p>
+        <p class="bestline">BEST <strong id="overBest">0</strong></p>
+        <div class="row">
+          <button id="againBtn" class="primary" type="button">PLAY AGAIN</button>
+          <button id="overMenu" class="ghost" type="button">MENU</button>
+        </div>
+        <p class="note">Enter or <kbd>R</kbd> restarts instantly.</p>
+      </div>
+    </section>
+  </div>
+  <div id="touchbar">
+    <button id="btnFlag" type="button" aria-pressed="false">MODE: DIG</button>
+    <p id="touchHint">Tap to dig. Double-tap a number to chord. Long-press a hidden tile to flag, or switch to FLAG mode. The first dig of each vein is safe.</p>
+  </div>
+</div>
+<script>
+(() => {
+  'use strict';
+
+  const BEST_KEY = 'lumen-quarry-best-v1';
+  const MUTE_KEY = 'lumen-quarry-mute-v1';
+  const FONT = 'system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+  const NUM_COLORS = ['#7eeadc', '#ffd27a', '#ff7d8c', '#d2b0ff', '#ffb15a', '#8fd4ff', '#f7f7f7', '#ff9ad8'];
+  const DEPTH_NAMES = ['Spark', 'Grotto', 'Cairn', 'Lantern', 'Crystal', 'Hollow', 'Basalt', 'Starvein', 'Umbral', 'Core'];
+  const MAX_LIVES = 5;
+
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d', { alpha: false });
+  const stage = document.getElementById('stage');
+  const flashEl = document.getElementById('flash');
+  const banner = document.getElementById('banner');
+  const bannerKicker = document.getElementById('bannerKicker');
+  const bannerTitle = document.getElementById('bannerTitle');
+  const bannerSub = document.getElementById('bannerSub');
+  const scoreEl = document.getElementById('score');
+  const bestEl = document.getElementById('best');
+  const levelEl = document.getElementById('level');
+  const minesEl = document.getElementById('mines');
+  const timeEl = document.getElementById('time');
+  const livesEl = document.getElementById('lives');
+  const menuBestEl = document.getElementById('menuBest');
+  const finalScoreEl = document.getElementById('finalScore');
+  const overBestEl = document.getElementById('overBest');
+  const overDetailEl = document.getElementById('overDetail');
+  const newBestEl = document.getElementById('newBest');
+  const pauseNoteEl = document.getElementById('pauseNote');
+  const btnMute = document.getElementById('btnMute');
+  const btnPause = document.getElementById('btnPause');
+  const btnFlag = document.getElementById('btnFlag');
+  const screenMenu = document.getElementById('screen-menu');
+  const screenPause = document.getElementById('screen-pause');
+  const screenOver = document.getElementById('screen-over');
+
+  const motionOK = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let phase = 'menu';
+  let resumePhase = 'play';
+  let level = 1;
+  let score = 0;
+  let best = 0;
+  let bestAtStart = 0;
+  let lives = 3;
+  let size = 7;
+  let mineCount = 5;
+  let plannedMines = 5;
+  let veinSize = 7;
+  let veinMines = 5;
+  let cells = [];
+  let NEI = [];
+  let started = false;
+  let timeAcc = 0;
+  let runTime = 0;
+  let clearLeft = 0;
+  let flagMode = false;
+  let muted = false;
+  let cursor = null;
+  let cursorOn = false;
+  let hover = null;
+  let shake = 0;
+  let flash = 0;
+  let flashColor = '#fff6e8';
+  let lastTs = 0;
+  let layoutW = 0;
+  let layoutH = 0;
+  let originX = 0;
+  let originY = 0;
+  let cellSize = 32;
+  let dpr = 1;
+  let viewW = 640;
+  let viewH = 640;
+  let livesSig = '';
+  let hudCache = {};
+  let lastInteract = 0;
+  let lastTap = { i: -1, t: 0 };
+  let press = null;
+  const particles = [];
+  const floaters = [];
+  const dust = [];
+
+  /* SOLVER_START */
+  function buildNei(nsize) {
+    const out = new Array(nsize * nsize);
+    for (let r = 0; r < nsize; r++) {
+      for (let c = 0; c < nsize; c++) {
+        const list = [];
+        for (let dr = -1; dr <= 1; dr++) {
+          for (let dc = -1; dc <= 1; dc++) {
+            if (!dr && !dc) continue;
+            const rr = r + dr;
+            const cc = c + dc;
+            if (rr >= 0 && cc >= 0 && rr < nsize && cc < nsize) list.push(rr * nsize + cc);
+          }
+        }
+        out[r * nsize + c] = list;
+      }
+    }
+    return out;
+  }
+
+  function computeAdj(nsize, mines, nei) {
+    const adj = new Int16Array(nsize * nsize);
+    for (let i = 0; i < mines.length; i++) {
+      if (mines[i]) {
+        adj[i] = -1;
+        continue;
+      }
+      let k = 0;
+      const list = nei[i];
+      for (let n = 0; n < list.length; n++) if (mines[list[n]]) k++;
+      adj[i] = k;
+    }
+    return adj;
+  }
+
+  function randomBoard(nsize, want, safeR, safeC, nei) {
+    const n = nsize * nsize;
+    const mines = new Uint8Array(n);
+    const banned = new Uint8Array(n);
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        const r = safeR + dr;
+        const c = safeC + dc;
+        if (r >= 0 && c >= 0 && r < nsize && c < nsize) banned[r * nsize + c] = 1;
+      }
+    }
+    const cand = [];
+    for (let i = 0; i < n; i++) if (!banned[i]) cand.push(i);
+    for (let i = cand.length - 1; i > 0; i--) {
+      const j = (Math.random() * (i + 1)) | 0;
+      const t = cand[i];
+      cand[i] = cand[j];
+      cand[j] = t;
+    }
+    const use = Math.min(want, cand.length);
+    for (let i = 0; i < use; i++) mines[cand[i]] = 1;
+    return { mines: mines, adj: computeAdj(nsize, mines, nei), mineCount: use, nei: nei };
+  }
+
+  function edgeBoard(nsize, want, safeR, safeC, nei) {
+    const n = nsize * nsize;
+    const mines = new Uint8Array(n);
+    const banned = new Uint8Array(n);
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        const r = safeR + dr;
+        const c = safeC + dc;
+        if (r >= 0 && c >= 0 && r < nsize && c < nsize) banned[r * nsize + c] = 1;
+      }
+    }
+    const rows = [];
+    for (let r = 0; r < nsize; r++) rows.push(r);
+    rows.sort((a, b) => Math.abs(b - safeR) - Math.abs(a - safeR));
+    const target = Math.max(1, Math.min(want, nsize));
+    let placed = 0;
+    for (let ri = 0; ri < rows.length && placed < target; ri++) {
+      const r = rows[ri];
+      for (let c = 0; c < nsize && placed < target; c++) {
+        const i = r * nsize + c;
+        if (banned[i]) continue;
+        mines[i] = 1;
+        placed++;
+      }
+    }
+    return { mines: mines, adj: computeAdj(nsize, mines, nei), mineCount: placed, nei: nei };
+  }
+
+  function isSolvable(nsize, mines, adj, nei, totalMines, startR, startC, deadline) {
+    const n = nsize * nsize;
+    const st = new Uint8Array(n);
+    const queue = [];
+    function reveal(i) {
+      if (st[i] !== 0) return true;
+      if (mines[i]) return false;
+      st[i] = 1;
+      if (adj[i] === 0) queue.push(i);
+      return true;
+    }
+    function flood() {
+      while (queue.length) {
+        const i = queue.pop();
+        const list = nei[i];
+        for (let k = 0; k < list.length; k++) {
+          const j = list[k];
+          if (st[j] === 0 && !mines[j]) {
+            st[j] = 1;
+            if (adj[j] === 0) queue.push(j);
+          }
+        }
+      }
+    }
+    if (!reveal(startR * nsize + startC)) return false;
+    flood();
+
+    function solved() {
+      for (let i = 0; i < n; i++) if (!mines[i] && st[i] !== 1) return false;
+      return true;
+    }
+
+    for (let guard = 0; guard < n * 3; guard++) {
+      if (performance.now() > deadline) return false;
+      if (solved()) return true;
+      let progress = false;
+
+      for (let i = 0; i < n; i++) {
+        if (st[i] !== 1 || adj[i] <= 0) continue;
+        let marked = 0;
+        const unk = [];
+        const list = nei[i];
+        for (let k = 0; k < list.length; k++) {
+          const j = list[k];
+          if (st[j] === 2) marked++;
+          else if (st[j] === 0) unk.push(j);
+        }
+        if (marked > adj[i]) return false;
+        if (!unk.length) continue;
+        if (marked === adj[i]) {
+          for (let u = 0; u < unk.length; u++) {
+            if (st[unk[u]] !== 0) continue;
+            if (!reveal(unk[u])) return false;
+            progress = true;
+          }
+        } else if (marked + unk.length === adj[i]) {
+          for (let u = 0; u < unk.length; u++) {
+            if (st[unk[u]] === 0) {
+              st[unk[u]] = 2;
+              progress = true;
+            }
+          }
+        }
+      }
+      if (progress) {
+        flood();
+        continue;
+      }
+
+      const cons = [];
+      for (let i = 0; i < n; i++) if (st[i] === 1 && adj[i] > 0) cons.push(i);
+      let subsetHit = false;
+      for (let a = 0; a < cons.length && !subsetHit; a++) {
+        const A = cons[a];
+        let markedA = 0;
+        const setA = [];
+        const listA = nei[A];
+        for (let k = 0; k < listA.length; k++) {
+          const j = listA[k];
+          if (st[j] === 2) markedA++;
+          else if (st[j] === 0) setA.push(j);
+        }
+        const needA = adj[A] - markedA;
+        if (needA < 0) return false;
+        if (!setA.length) continue;
+        for (let b = 0; b < cons.length; b++) {
+          if (a === b) continue;
+          const B = cons[b];
+          let markedB = 0;
+          const inB = new Uint8Array(n);
+          let countB = 0;
+          const listB = nei[B];
+          for (let k = 0; k < listB.length; k++) {
+            const j = listB[k];
+            if (st[j] === 2) markedB++;
+            else if (st[j] === 0) {
+              inB[j] = 1;
+              countB++;
+            }
+          }
+          if (countB === setA.length) continue;
+          let all = true;
+          for (let k = 0; k < setA.length; k++) if (!inB[setA[k]]) { all = false; break; }
+          if (!all) continue;
+          const needB = adj[B] - markedB;
+          const diffNeed = needB - needA;
+          const diff = [];
+          for (let k = 0; k < listB.length; k++) {
+            const j = listB[k];
+            if (st[j] === 0 && !setA.includes(j)) diff.push(j);
+          }
+          if (diffNeed === 0) {
+            for (let u = 0; u < diff.length; u++) {
+              if (st[diff[u]] === 0) {
+                if (!reveal(diff[u])) return false;
+                progress = true;
+              }
+            }
+          } else if (diffNeed === diff.length) {
+            for (let u = 0; u < diff.length; u++) {
+              if (st[diff[u]] === 0) {
+                st[diff[u]] = 2;
+                progress = true;
+              }
+            }
+          } else if (diffNeed < 0 || diffNeed > diff.length) {
+            return false;
+          }
+          if (progress) subsetHit = true;
+          if (subsetHit) break;
+        }
+      }
+      if (progress) {
+        flood();
+        continue;
+      }
+
+      const inF = new Uint8Array(n);
+      const frontier = [];
+      for (let i = 0; i < n; i++) {
+        if (st[i] !== 0) continue;
+        const list = nei[i];
+        for (let k = 0; k < list.length; k++) {
+          const j = list[k];
+          if (st[j] === 1 && adj[j] > 0) {
+            inF[i] = 1;
+            frontier.push(i);
+            break;
+          }
+        }
+      }
+      const seen = new Uint8Array(n);
+      let bruteHit = false;
+      for (let f = 0; f < frontier.length && !bruteHit; f++) {
+        const f0 = frontier[f];
+        if (seen[f0]) continue;
+        const comp = [];
+        const stack = [f0];
+        seen[f0] = 1;
+        while (stack.length) {
+          const x = stack.pop();
+          comp.push(x);
+          const around = nei[x];
+          for (let k = 0; k < around.length; k++) {
+            const con = around[k];
+            if (st[con] !== 1) continue;
+            const ring = nei[con];
+            for (let q = 0; q < ring.length; q++) {
+              const y = ring[q];
+              if (inF[y] && !seen[y]) {
+                seen[y] = 1;
+                stack.push(y);
+              }
+            }
+          }
+        }
+        if (comp.length > 16) continue;
+        if (performance.now() > deadline) return false;
+        const idx = new Int16Array(n);
+        idx.fill(-1);
+        for (let k = 0; k < comp.length; k++) idx[comp[k]] = k;
+        const constraints = [];
+        const seenC = new Uint8Array(n);
+        for (let k = 0; k < comp.length; k++) {
+          const around = nei[comp[k]];
+          for (let q = 0; q < around.length; q++) {
+            const con = around[q];
+            if (st[con] === 1 && adj[con] > 0 && !seenC[con]) {
+              seenC[con] = 1;
+              constraints.push(con);
+            }
+          }
+        }
+        const info = [];
+        for (let k = 0; k < constraints.length; k++) {
+          const con = constraints[k];
+          let marked = 0;
+          const bits = [];
+          let outside = 0;
+          const list = nei[con];
+          for (let q = 0; q < list.length; q++) {
+            const j = list[q];
+            if (idx[j] >= 0) bits.push(idx[j]);
+            else if (st[j] === 2) marked++;
+            else if (st[j] === 0) outside++;
+          }
+          info.push({ need: adj[con], marked: marked, bits: bits, outside: outside });
+        }
+        let markedMines = 0;
+        let hidden = 0;
+        for (let i = 0; i < n; i++) {
+          if (st[i] === 2) markedMines++;
+          else if (st[i] === 0) hidden++;
+        }
+        const rem = totalMines - markedMines;
+        const outsideHidden = hidden - comp.length;
+        if (rem < 0) return false;
+        const total = 1 << comp.length;
+        const agreeM = new Uint32Array(comp.length);
+        const agreeS = new Uint32Array(comp.length);
+        let valid = 0;
+        for (let mask = 0; mask < total; mask++) {
+          if ((mask & 2047) === 0 && performance.now() > deadline) return false;
+          let mc = 0;
+          for (let k = 0; k < comp.length; k++) if (mask & (1 << k)) mc++;
+          if (mc > rem || rem - mc > outsideHidden) continue;
+          let ok = true;
+          for (let k = 0; k < info.length; k++) {
+            const inf = info[k];
+            let m = inf.marked;
+            const bits = inf.bits;
+            for (let q = 0; q < bits.length; q++) if (mask & (1 << bits[q])) m++;
+            if (m > inf.need || m + inf.outside < inf.need) {
+              ok = false;
+              break;
+            }
+          }
+          if (!ok) continue;
+          valid++;
+          for (let k = 0; k < comp.length; k++) {
+            if (mask & (1 << k)) agreeM[k]++;
+            else agreeS[k]++;
+          }
+        }
+        if (valid === 0) return false;
+        for (let k = 0; k < comp.length; k++) {
+          if (agreeM[k] === valid && st[comp[k]] === 0) {
+            st[comp[k]] = 2;
+            progress = true;
+          } else if (agreeS[k] === valid && st[comp[k]] === 0) {
+            if (!reveal(comp[k])) return false;
+            progress = true;
+          }
+        }
+        if (progress) bruteHit = true;
+      }
+      if (progress) {
+        flood();
+        continue;
+      }
+
+      let markedMines = 0;
+      let hidden = 0;
+      for (let i = 0; i < n; i++) {
+        if (st[i] === 2) markedMines++;
+        else if (st[i] === 0) hidden++;
+      }
+      const rem = totalMines - markedMines;
+      if (rem < 0 || rem > hidden) return false;
+      if (rem === 0 && hidden > 0) {
+        for (let i = 0; i < n; i++) {
+          if (st[i] === 0 && !reveal(i)) return false;
+        }
+        flood();
+        continue;
+      }
+      if (rem === hidden && hidden > 0) {
+        for (let i = 0; i < n; i++) if (st[i] === 0) st[i] = 2;
+        continue;
+      }
+      return false;
+    }
+    return solved();
+  }
+  /* SOLVER_END */
+
+  const Sfx = {
+    ctx: null,
+    master: null,
+    noise: null,
+    ensure() {
+      if (muted) return null;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      try {
+        if (!this.ctx) {
+          const ctxA = new AC();
+          const master = ctxA.createGain();
+          master.gain.value = 0.42;
+          const comp = ctxA.createDynamicsCompressor();
+          comp.threshold.value = -16;
+          comp.knee.value = 10;
+          comp.ratio.value = 5;
+          comp.attack.value = 0.003;
+          comp.release.value = 0.12;
+          master.connect(comp);
+          comp.connect(ctxA.destination);
+          this.ctx = ctxA;
+          this.master = master;
+        }
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        return this.ctx;
+      } catch (err) {
+        return null;
+      }
+    },
+    tone(freq, dur, type, vol, slide) {
+      try {
+        const actx = this.ensure();
+        if (!actx || muted) return;
+        const t = actx.currentTime;
+        const o = actx.createOscillator();
+        const g = actx.createGain();
+        o.type = type || 'sine';
+        o.frequency.setValueAtTime(Math.max(40, freq), t);
+        if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, slide), t + dur);
+        g.gain.setValueAtTime(vol, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        o.connect(g);
+        g.connect(this.master);
+        o.start(t);
+        o.stop(t + dur + 0.02);
+      } catch (err) { /* audio is optional */ }
+    },
+    noise(dur, vol) {
+      try {
+        const actx = this.ensure();
+        if (!actx || muted) return;
+        if (!this.noiseBuf) {
+          const len = (actx.sampleRate * 0.35) | 0;
+          const buf = actx.createBuffer(1, len, actx.sampleRate);
+          const data = buf.getChannelData(0);
+          for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+          this.noiseBuf = buf;
+        }
+        const t = actx.currentTime;
+        const src = actx.createBufferSource();
+        src.buffer = this.noiseBuf;
+        const filter = actx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(900, t);
+        filter.frequency.exponentialRampToValueAtTime(140, t + dur);
+        const g = actx.createGain();
+        g.gain.setValueAtTime(vol, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        src.connect(filter);
+        filter.connect(g);
+        g.connect(this.master);
+        src.start(t);
+        src.stop(t + dur + 0.02);
+      } catch (err) { /* audio is optional */ }
+    },
+    dig(n) {
+      if (n <= 1) this.tone(520, 0.07, 'triangle', 0.07, 340);
+      else if (n < 8) {
+        this.tone(480, 0.08, 'triangle', 0.06, 360);
+        this.tone(720, 0.1, 'sine', 0.05, 640);
+      } else {
+        this.tone(523, 0.1, 'sine', 0.06);
+        this.tone(659, 0.12, 'sine', 0.05);
+        this.tone(784, 0.14, 'triangle', 0.05);
+      }
+    },
+    flag(on) {
+      this.tone(on ? 240 : 160, 0.06, 'square', 0.04, on ? 320 : 110);
+    },
+    nope() {
+      this.tone(98, 0.09, 'sawtooth', 0.03, 70);
+    },
+    hit() {
+      this.noise(0.28, 0.16);
+      this.tone(110, 0.28, 'sine', 0.1, 42);
+    },
+    die() {
+      try {
+        this.noise(0.45, 0.18);
+        this.tone(392, 0.18, 'triangle', 0.07, 260);
+        const actx = this.ensure();
+        if (!actx || muted) return;
+        [330, 247, 164, 98].forEach((f, i) => {
+          const t = actx.currentTime + 0.08 + i * 0.11;
+          const o = actx.createOscillator();
+          const g = actx.createGain();
+          o.type = 'sine';
+          o.frequency.setValueAtTime(f, t);
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.exponentialRampToValueAtTime(0.07, t + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+          o.connect(g);
+          g.connect(this.master);
+          o.start(t);
+          o.stop(t + 0.24);
+        });
+      } catch (err) { /* audio is optional */ }
+    },
+    clear() {
+      try {
+        [523, 659, 784, 1046].forEach((f, i) => {
+          const actx = this.ensure();
+          if (!actx || muted) return;
+          const t = actx.currentTime + i * 0.07;
+          const o = actx.createOscillator();
+          const g = actx.createGain();
+          o.type = i % 2 ? 'triangle' : 'sine';
+          o.frequency.setValueAtTime(f, t);
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.exponentialRampToValueAtTime(0.07, t + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+          o.connect(g);
+          g.connect(this.master);
+          o.start(t);
+          o.stop(t + 0.3);
+        });
+      } catch (err) { /* audio is optional */ }
+    },
+    life() {
+      this.tone(880, 0.12, 'sine', 0.05, 1320);
+    },
+    ui() {
+      this.tone(640, 0.05, 'sine', 0.04, 880);
+    }
+  };
+
+  function depthName(n) {
+    if (n <= DEPTH_NAMES.length) return DEPTH_NAMES[n - 1];
+    return 'Core ' + (n - DEPTH_NAMES.length + 1);
+  }
+
+  function paramsForLevel(lv) {
+    const availW = Math.max(240, window.innerWidth - 28);
+    const availH = Math.max(220, window.innerHeight - 200);
+    const fit = Math.max(6, Math.min(10, Math.floor(Math.min(availW, availH) / 34)));
+    const want = Math.min(10, 7 + Math.floor((lv - 1) / 2));
+    const sz = Math.max(6, Math.min(fit, want));
+    const density = Math.min(0.22, 0.11 + (lv - 1) * 0.008);
+    let mines = Math.round(sz * sz * density);
+    const hardCap = Math.min(0.23, 0.15 + Math.max(0, lv - 5) * 0.006);
+    mines = Math.max(4, Math.min(mines, Math.floor(sz * sz * hardCap), sz * sz - 12));
+    return { size: sz, mines: mines };
+  }
+
+  function loadStore() {
+    try {
+      const n = parseInt(localStorage.getItem(BEST_KEY), 10);
+      best = Number.isFinite(n) && n > 0 ? Math.min(n, 1e12) : 0;
+    } catch (err) {
+      best = 0;
+    }
+    try {
+      muted = localStorage.getItem(MUTE_KEY) === '1';
+    } catch (err) {
+      muted = false;
+    }
+    bestAtStart = best;
+  }
+
+  function saveBest() {
+    try { localStorage.setItem(BEST_KEY, String(best)); } catch (err) { /* ignore */ }
+  }
+
+  function saveMute() {
+    try { localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); } catch (err) { /* ignore */ }
+  }
+
+  function setText(el, value) {
+    const s = String(value);
+    if (el.textContent !== s) el.textContent = s;
+  }
+
+  function flagCount() {
+    let n = 0;
+    for (let i = 0; i < cells.length; i++) if (cells[i].flagged) n++;
+    return n;
+  }
+
+  function renderLives() {
+    const sig = String(lives);
+    if (sig === livesSig) return;
+    livesSig = sig;
+    livesEl.replaceChildren();
+    for (let i = 0; i < MAX_LIVES; i++) {
+      const pip = document.createElement('i');
+      if (i < lives) pip.className = 'on';
+      livesEl.appendChild(pip);
+    }
+  }
+
+  function syncHud() {
+    const flags = started ? flagCount() : 0;
+    const left = started ? mineCount - flags : plannedMines;
+    const timeShow = started || phase === 'clear' ? Math.floor(timeAcc) : 0;
+    const pack = [score, best, level, left, timeShow, phase].join('|');
+    if (pack === hudCache.pack) {
+      renderLives();
+      return;
+    }
+    hudCache.pack = pack;
+    setText(scoreEl, score);
+    setText(bestEl, best);
+    setText(levelEl, level);
+    setText(minesEl, left);
+    setText(timeEl, timeShow);
+    setText(menuBestEl, best);
+    minesEl.classList.toggle('bad', started && left < 0);
+    btnPause.disabled = phase !== 'play' && phase !== 'clear';
+    btnMute.textContent = muted ? 'MUTED' : 'SFX';
+    btnMute.setAttribute('aria-pressed', muted ? 'true' : 'false');
+    btnFlag.textContent = flagMode ? 'MODE: FLAG' : 'MODE: DIG';
+    btnFlag.setAttribute('aria-pressed', flagMode ? 'true' : 'false');
+    renderLives();
+  }
+
+  function noteScore() {
+    if (score > best) {
+      best = score;
+      saveBest();
+    }
+    hudCache.pack = '';
+  }
+
+  function alloc(nsize) {
+    size = nsize;
+    NEI = buildNei(size);
+    cells = new Array(size * size);
+    for (let i = 0; i < cells.length; i++) {
+      cells[i] = {
+        mine: false,
+        adj: 0,
+        revealed: false,
+        flagged: false,
+        defused: false,
+        wasFlagged: false,
+        anim: 0
+      };
+    }
+    started = false;
+    cursor = { r: (size / 2) | 0, c: (size / 2) | 0 };
+  }
+
+  function recomputeAdj() {
+    let m = 0;
+    for (let i = 0; i < cells.length; i++) if (cells[i].mine) m++;
+    mineCount = m;
+    for (let i = 0; i < cells.length; i++) {
+      if (cells[i].mine) {
+        cells[i].adj = 0;
+        continue;
+      }
+      let k = 0;
+      const list = NEI[i];
+      for (let n = 0; n < list.length; n++) if (cells[list[n]].mine) k++;
+      cells[i].adj = k;
+    }
+  }
+
+  function applyMines(mines) {
+    for (let i = 0; i < cells.length; i++) {
+      const cell = cells[i];
+      cell.mine = !!mines[i];
+      cell.revealed = false;
+      cell.flagged = false;
+      cell.defused = false;
+      cell.wasFlagged = false;
+      cell.anim = 0;
+    }
+    recomputeAdj();
+  }
+
+  function forceSafeOpening(sr, sc) {
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        const r = sr + dr;
+        const c = sc + dc;
+        if (r < 0 || c < 0 || r >= size || c >= size) continue;
+        const cell = cells[r * size + c];
+        if (cell.mine) cell.mine = false;
+      }
+    }
+    recomputeAdj();
+  }
+
+  function boardFromMines(mines, nei) {
+    let count = 0;
+    for (let i = 0; i < mines.length; i++) if (mines[i]) count++;
+    return { mines: mines, adj: computeAdj(size, mines, nei), mineCount: count, nei: nei };
+  }
+
+  function proven(board, sr, sc, budget) {
+    return isSolvable(size, board.mines, board.adj, board.nei, board.mineCount, sr, sc, performance.now() + budget);
+  }
+
+  function relaxUntilSolvable(board, sr, sc, deadline) {
+    let guard = 0;
+    while (guard++ < 40 && performance.now() < deadline) {
+      if (board.mineCount <= 1) break;
+      if (proven(board, sr, sc, 26)) return board;
+      const opts = [];
+      for (let i = 0; i < board.mines.length; i++) if (board.mines[i]) opts.push(i);
+      if (opts.length <= 1) break;
+      board.mines[opts[(Math.random() * opts.length) | 0]] = 0;
+      board.mineCount--;
+      board.adj = computeAdj(size, board.mines, board.nei);
+    }
+    if (proven(board, sr, sc, 26)) return board;
+    return board;
+  }
+
+  function generate(sr, sc) {
+    const nei = NEI;
+    const want = veinMines;
+    const deadline = performance.now() + 300;
+    let chosen = null;
+    let tries = 0;
+    while (tries < 16 && performance.now() < deadline) {
+      tries++;
+      const board = randomBoard(size, want, sr, sc, nei);
+      if (proven(board, sr, sc, 42)) {
+        chosen = board;
+        break;
+      }
+    }
+    if (!chosen) {
+      chosen = relaxUntilSolvable(edgeBoard(size, want, sr, sc, nei), sr, sc, deadline + 160);
+    }
+    applyMines(chosen.mines);
+    const before = mineCount;
+    forceSafeOpening(sr, sc);
+    if (mineCount !== before) {
+      const mines = new Uint8Array(cells.length);
+      for (let i = 0; i < cells.length; i++) mines[i] = cells[i].mine ? 1 : 0;
+      const fixed = relaxUntilSolvable(boardFromMines(mines, nei), sr, sc, performance.now() + 160);
+      applyMines(fixed.mines);
+      forceSafeOpening(sr, sc);
+    }
+    plannedMines = mineCount;
+    started = true;
+    timeAcc = 0;
+  }
+
+  function prepareVein(force) {
+    const p = paramsForLevel(level);
+    veinSize = p.size;
+    veinMines = p.mines;
+    plannedMines = p.mines;
+    if (force || !cells.length || size !== veinSize) alloc(veinSize);
+    else {
+      for (let i = 0; i < cells.length; i++) {
+        const cell = cells[i];
+        cell.mine = false;
+        cell.adj = 0;
+        cell.revealed = false;
+        cell.flagged = false;
+        cell.defused = false;
+        cell.wasFlagged = false;
+        cell.anim = 0;
+      }
+      started = false;
+    }
+    hover = null;
+    lastTap.i = -1;
+    hudCache.pack = '';
+  }
+
+  function burst(x, y, color, count, speed) {
+    const n = motionOK ? count : Math.min(6, count);
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const v = speed * (0.35 + Math.random());
+      particles.push({
+        x: x,
+        y: y,
+        vx: Math.cos(a) * v,
+        vy: Math.sin(a) * v - 18,
+        life: 0.35 + Math.random() * 0.4,
+        max: 0.75,
+        color: color,
+        size: 1.6 + Math.random() * 2.6,
+        g: 280 + Math.random() * 180
+      });
+    }
+    if (particles.length > 320) particles.splice(0, particles.length - 320);
+  }
+
+  function floater(x, y, text, color) {
+    floaters.push({ x: x, y: y, text: text, life: 0.8, max: 0.8, color: color || '#f0c27a' });
+    if (floaters.length > 24) floaters.shift();
+  }
+
+  function cellCenter(i) {
+    const r = (i / size) | 0;
+    const c = i % size;
+    return {
+      x: originX + c * cellSize + cellSize * 0.5,
+      y: originY + r * cellSize + cellSize * 0.5
+    };
+  }
+
+  function addScore(amount) {
+    if (amount <= 0) return;
+    score += amount;
+    noteScore();
+  }
+
+  function revealSafe(i) {
+    const cell = cells[i];
+    if (!cell || cell.revealed || cell.flagged || cell.mine) return 0;
+    cell.revealed = true;
+    cell.anim = 1;
+    let opened = 1;
+    if (cell.adj !== 0) return opened;
+    const q = [i];
+    while (q.length) {
+      const cur = q.pop();
+      const list = NEI[cur];
+      for (let n = 0; n < list.length; n++) {
+        const j = list[n];
+        const nb = cells[j];
+        if (nb.revealed || nb.flagged || nb.mine) continue;
+        nb.revealed = true;
+        nb.anim = 1;
+        opened++;
+        if (nb.adj === 0) q.push(j);
+      }
+    }
+    return opened;
+  }
+
+  function allSafeOpen() {
+    for (let i = 0; i < cells.length; i++) {
+      if (!cells[i].mine && !cells[i].revealed) return false;
+    }
+    return true;
+  }
+
+  function strike(i) {
+    const cell = cells[i];
+    if (!cell || cell.defused || (cell.revealed && !cell.mine)) return;
+    cell.flagged = false;
+    cell.revealed = true;
+    cell.defused = true;
+    cell.anim = 1;
+    lives = Math.max(0, lives - 1);
+    livesSig = '';
+    shake = 1;
+    flash = 0.72;
+    flashColor = '#ff5d73';
+    const pos = cellCenter(i);
+    burst(pos.x, pos.y, '#ff8b9a', 28, 220);
+    burst(pos.x, pos.y, '#ffd0a8', 12, 120);
+    floater(pos.x, pos.y - 8, lives > 0 ? 'CHARGE' : 'COLLAPSE', '#ff8b9a');
+    Sfx.hit();
+    hudCache.pack = '';
+    if (lives <= 0) {
+      for (let k = 0; k < cells.length; k++) {
+        if (cells[k].mine) {
+          cells[k].wasFlagged = cells[k].flagged;
+          cells[k].flagged = false;
+          cells[k].revealed = true;
+          cells[k].anim = 1;
+        }
+      }
+      endRun();
+    }
+  }
+
+  function openCell(r, c) {
+    if (phase !== 'play') return 0;
+    if (r < 0 || c < 0 || r >= size || c >= size) return 0;
+    if (!started) generate(r, c);
+    const i = r * size + c;
+    const cell = cells[i];
+    if (cell.revealed || cell.flagged) return 0;
+    if (cell.mine) {
+      strike(i);
+      return 0;
+    }
+    const before = score;
+    const opened = revealSafe(i);
+    if (!opened) return 0;
+    let gained = opened * 10 * level;
+    if (opened >= 8) gained += (opened - 7) * 5 * level;
+    addScore(gained);
+    const pos = cellCenter(i);
+    burst(pos.x, pos.y, opened >= 8 ? '#f0c27a' : '#7eeadc', Math.min(22, 6 + opened), 90 + Math.min(160, opened * 6));
+    floater(pos.x, pos.y, '+' + (score - before), '#ffe1a8');
+    if (opened >= 12) {
+      flash = 0.16;
+      flashColor = '#fff6e8';
+    }
+    Sfx.dig(opened);
+    if (phase === 'play' && allSafeOpen()) onClear();
+    return opened;
+  }
+
+  function chord(r, c, quiet) {
+    if (phase !== 'play' || !started) return;
+    if (r < 0 || c < 0 || r >= size || c >= size) return;
+    const cell = cells[r * size + c];
+    if (!cell.revealed || cell.adj <= 0 || cell.mine) return;
+    let known = 0;
+    const hidden = [];
+    const list = NEI[r * size + c];
+    for (let n = 0; n < list.length; n++) {
+      const nb = cells[list[n]];
+      if (nb.flagged || (nb.revealed && nb.mine)) known++;
+      else if (!nb.revealed) hidden.push(list[n]);
+    }
+    if (known !== cell.adj) {
+      if (!quiet) {
+        Sfx.nope();
+        shake = Math.max(shake, 0.28);
+      }
+      return;
+    }
+    for (let n = 0; n < hidden.length; n++) {
+      const i = hidden[n];
+      openCell((i / size) | 0, i % size);
+      if (phase !== 'play') return;
+    }
+  }
+
+  function toggleFlag(r, c) {
+    if (phase !== 'play' || !started) return;
+    if (r < 0 || c < 0 || r >= size || c >= size) return;
+    const cell = cells[r * size + c];
+    if (cell.revealed) return;
+    cell.flagged = !cell.flagged;
+    Sfx.flag(cell.flagged);
+    const pos = cellCenter(r * size + c);
+    burst(pos.x, pos.y, '#f0c27a', 8, 70);
+    hudCache.pack = '';
+  }
+
+  function onClear() {
+    if (phase !== 'play') return;
+    const par = 12 + size * size * 0.28 + mineCount * 0.8;
+    const timeBonus = Math.max(0, Math.round((par - timeAcc) * 4 * level));
+    const clearBonus = 250 * level;
+    addScore(clearBonus + timeBonus);
+    let extra = '';
+    if (level % 3 === 0 && lives < MAX_LIVES) {
+      lives++;
+      livesSig = '';
+      extra = ' · lantern restored';
+      Sfx.life();
+    }
+    Sfx.clear();
+    flash = 0.22;
+    flashColor = '#fff1cc';
+    shake = Math.max(shake, 0.35);
+    for (let k = 0; k < 36; k++) {
+      const i = (Math.random() * cells.length) | 0;
+      const pos = cellCenter(i);
+      burst(pos.x, pos.y, k % 2 ? '#f0c27a' : '#7eeadc', 1, 160);
+    }
+    bannerKicker.textContent = 'VEIN CLEARED';
+    bannerTitle.textContent = depthName(level).toUpperCase();
+    bannerSub.textContent = '+' + (clearBonus + timeBonus) + extra + '  ·  tap or Enter';
+    banner.hidden = false;
+    phase = 'clear';
+    clearLeft = 2.2;
+    hudCache.pack = '';
+  }
+
+  function nextDepth() {
+    if (phase !== 'clear') return;
+    level += 1;
+    timeAcc = 0;
+    cursorOn = false;
+    banner.hidden = true;
+    phase = 'play';
+    prepareVein(true);
+    Sfx.ui();
+  }
+
+  function endRun() {
+    if (phase === 'over') return;
+    phase = 'over';
+    banner.hidden = true;
+    Sfx.die();
+    finalScoreEl.textContent = String(score);
+    overBestEl.textContent = String(best);
+    overDetailEl.textContent = 'Depth ' + level + ' · ' + depthName(level) + ' · ' + Math.floor(runTime) + 's in the dark';
+    newBestEl.hidden = !(score > bestAtStart && score > 0);
+    screenPause.classList.remove('show');
+    screenMenu.classList.remove('show');
+    screenOver.classList.add('show');
+    btnPause.disabled = true;
+    hudCache.pack = '';
+    setTimeout(() => {
+      if (phase === 'over') document.getElementById('againBtn').focus();
+    }, 30);
+  }
+
+  function showMenu() {
+    phase = 'menu';
+    started = false;
+    banner.hidden = true;
+    screenOver.classList.remove('show');
+    screenPause.classList.remove('show');
+    screenMenu.classList.add('show');
+    prepareVein(true);
+    hudCache.pack = '';
+    syncHud();
+  }
+
+  function begin() {
+    if (phase === 'play' || phase === 'pause') return;
+    score = 0;
+    level = 1;
+    lives = 3;
+    livesSig = '';
+    runTime = 0;
+    timeAcc = 0;
+    bestAtStart = best;
+    flagMode = false;
+    cursorOn = false;
+    shake = 0;
+    flash = 0;
+    particles.length = 0;
+    floaters.length = 0;
+    screenMenu.classList.remove('show');
+    screenPause.classList.remove('show');
+    screenOver.classList.remove('show');
+    banner.hidden = true;
+    phase = 'play';
+    prepareVein(true);
+    Sfx.ensure();
+    Sfx.ui();
+    hudCache.pack = '';
+    syncHud();
+  }
+
+  function pause(reason) {
+    if (phase !== 'play' && phase !== 'clear') return;
+    resumePhase = phase;
+    phase = 'pause';
+    pauseNoteEl.textContent = reason || 'The quarry waits.';
+    screenPause.classList.add('show');
+    hudCache.pack = '';
+  }
+
+  function resume() {
+    if (phase !== 'pause') return;
+    phase = resumePhase === 'clear' ? 'clear' : 'play';
+    screenPause.classList.remove('show');
+    hudCache.pack = '';
+  }
+
+  function toggleMute() {
+    muted = !muted;
+    if (Sfx.master) Sfx.master.gain.value = muted ? 0 : 0.42;
+    saveMute();
+    hudCache.pack = '';
+    syncHud();
+  }
+
+  function layout() {
+    viewW = Math.max(1, stage.clientWidth);
+    viewH = Math.max(1, stage.clientHeight);
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.max(1, Math.round(viewW * dpr));
+    canvas.height = Math.max(1, Math.round(viewH * dpr));
+    const pad = 14;
+    const availW = Math.max(1, viewW - pad * 2);
+    const availH = Math.max(1, viewH - pad * 2);
+    cellSize = Math.max(8, Math.min(68, Math.floor(Math.min(availW, availH) / size)));
+    const grid = cellSize * size;
+    originX = Math.floor((viewW - grid) / 2);
+    originY = Math.floor((viewH - grid) / 2);
+  }
+
+  function cellAt(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    const c = Math.floor((x - originX) / cellSize);
+    const r = Math.floor((y - originY) / cellSize);
+    if (r < 0 || c < 0 || r >= size || c >= size) return null;
+    return { r: r, c: c };
+  }
+
+  function actPrimary(r, c) {
+    if (phase === 'clear') {
+      nextDepth();
+      return;
+    }
+    if (phase !== 'play') return;
+    const i = r * size + c;
+    const now = performance.now();
+    const cell = cells[i];
+    if (cell && cell.revealed && cell.adj > 0 && lastTap.i === i && now - lastTap.t < 340) {
+      lastTap.t = 0;
+      chord(r, c, true);
+      return;
+    }
+    lastTap = { i: i, t: now };
+    if (!cell.revealed && !cell.flagged) openCell(r, c);
+    else if (cell.revealed && cell.adj > 0 && started) {
+      /* second tap chords; a single tap on a number waits */
+    }
+  }
+
+  function onKey(e) {
+    const k = e.key.toLowerCase();
+    if (k === 'm') {
+      e.preventDefault();
+      Sfx.ensure();
+      toggleMute();
+      return;
+    }
+    if (phase === 'menu') {
+      if (k === 'enter' || k === ' ') {
+        e.preventDefault();
+        begin();
+      }
+      return;
+    }
+    if (phase === 'over') {
+      if (k === 'enter' || k === 'r' || k === ' ') {
+        e.preventDefault();
+        begin();
+      } else if (k === 'escape') {
+        e.preventDefault();
+        showMenu();
+      }
+      return;
+    }
+    if (phase === 'pause') {
+      if (k === 'enter' || k === 'p' || k === 'escape' || k === ' ') {
+        e.preventDefault();
+        resume();
+      } else if (k === 'r') {
+        e.preventDefault();
+        screenPause.classList.remove('show');
+        phase = 'menu';
+        begin();
+      }
+      return;
+    }
+    if (phase === 'clear') {
+      if (k === 'enter' || k === ' ') {
+        e.preventDefault();
+        nextDepth();
+      } else if (k === 'p' || k === 'escape') {
+        e.preventDefault();
+        pause('Vein cleared — paused before the next depth.');
+      }
+      return;
+    }
+    if (phase !== 'play') return;
+    if (k === 'p' || k === 'escape') {
+      e.preventDefault();
+      pause('The quarry waits.');
+      return;
+    }
+    if (k === 'arrowup' || k === 'arrowdown' || k === 'arrowleft' || k === 'arrowright' || k === 'w' || k === 'a' || k === 's' || k === 'd') {
+      e.preventDefault();
+      if (!cursor) cursor = { r: (size / 2) | 0, c: (size / 2) | 0 };
+      cursorOn = true;
+      if (k === 'arrowup' || k === 'w') cursor.r = Math.max(0, cursor.r - 1);
+      else if (k === 'arrowdown' || k === 's') cursor.r = Math.min(size - 1, cursor.r + 1);
+      else if (k === 'arrowleft' || k === 'a') cursor.c = Math.max(0, cursor.c - 1);
+      else cursor.c = Math.min(size - 1, cursor.c + 1);
+      return;
+    }
+    if (e.repeat) return;
+    if (k === ' ' || k === 'enter') {
+      e.preventDefault();
+      if (!cursor) cursor = { r: (size / 2) | 0, c: (size / 2) | 0 };
+      cursorOn = true;
+      if (flagMode && started) toggleFlag(cursor.r, cursor.c);
+      else actPrimary(cursor.r, cursor.c);
+    } else if (k === 'f') {
+      e.preventDefault();
+      if (!cursor) cursor = { r: (size / 2) | 0, c: (size / 2) | 0 };
+      cursorOn = true;
+      if (!started) actPrimary(cursor.r, cursor.c);
+      else toggleFlag(cursor.r, cursor.c);
+    } else if (k === 'c') {
+      e.preventDefault();
+      if (!cursor) cursor = { r: (size / 2) | 0, c: (size / 2) | 0 };
+      cursorOn = true;
+      chord(cursor.r, cursor.c, false);
+    }
+  }
+
+  function clearPressTimer() {
+    if (press && press.timer) {
+      clearTimeout(press.timer);
+      press.timer = 0;
+    }
+  }
+
+  function onDown(e) {
+    lastInteract = performance.now();
+    if (e.button === 1) {
+      e.preventDefault();
+      const hit = cellAt(e.clientX, e.clientY);
+      if (hit && phase === 'play') chord(hit.r, hit.c, false);
+      return;
+    }
+    if (e.button === 2 || (e.button === 0 && e.ctrlKey && e.pointerType === 'mouse')) {
+      e.preventDefault();
+      const hit = cellAt(e.clientX, e.clientY);
+      if (!hit || phase !== 'play') return;
+      if (!started) actPrimary(hit.r, hit.c);
+      else toggleFlag(hit.r, hit.c);
+      return;
+    }
+    if (e.button !== 0) return;
+    e.preventDefault();
+    clearPressTimer();
+    const hit = cellAt(e.clientX, e.clientY);
+    press = {
+      id: e.pointerId,
+      x: e.clientX,
+      y: e.clientY,
+      hit: hit,
+      long: false,
+      moved: false,
+      touch: e.pointerType !== 'mouse',
+      timer: 0
+    };
+    if (press.touch && hit && phase === 'play' && started && !flagMode) {
+      press.timer = setTimeout(() => {
+        if (!press || press.moved) return;
+        press.long = true;
+        toggleFlag(hit.r, hit.c);
+      }, 460);
+    }
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+  }
+
+  function onMove(e) {
+    if (e.pointerType === 'mouse') hover = cellAt(e.clientX, e.clientY);
+    if (!press || e.pointerId !== press.id) return;
+    const dx = e.clientX - press.x;
+    const dy = e.clientY - press.y;
+    if (dx * dx + dy * dy > 324) {
+      press.moved = true;
+      clearPressTimer();
+    }
+  }
+
+  function onUp(e) {
+    if (!press || e.pointerId !== press.id) return;
+    clearPressTimer();
+    const snapshot = press;
+    press = null;
+    if (snapshot.long || snapshot.moved) return;
+    if (phase === 'clear') {
+      nextDepth();
+      return;
+    }
+    if (phase !== 'play' || !snapshot.hit) return;
+    const hit = snapshot.hit;
+    if (flagMode && started) toggleFlag(hit.r, hit.c);
+    else if (flagMode && !started) actPrimary(hit.r, hit.c);
+    else actPrimary(hit.r, hit.c);
+  }
+
+  function onCancel() {
+    clearPressTimer();
+    press = null;
+  }
+
+  function roundRect(x, y, w, h, r) {
+    const rad = Math.max(2, Math.min(r, w * 0.5, h * 0.5));
+    ctx.beginPath();
+    ctx.moveTo(x + rad, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rad);
+    ctx.arcTo(x + w, y + h, x, y + h, rad);
+    ctx.arcTo(x, y + h, x, y, rad);
+    ctx.arcTo(x, y, x + w, y, rad);
+    ctx.closePath();
+  }
+
+  function drawFlag(cx, cy, s) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.strokeStyle = '#f3e2c2';
+    ctx.lineWidth = Math.max(1.4, s * 0.055);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.1, s * 0.24);
+    ctx.lineTo(-s * 0.1, -s * 0.26);
+    ctx.stroke();
+    ctx.fillStyle = '#ff5d6c';
+    ctx.shadowColor = 'rgba(255, 90, 110, 0.8)';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.08, -s * 0.26);
+    ctx.lineTo(s * 0.24, -s * 0.12);
+    ctx.lineTo(-s * 0.08, 0.01);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawCharge(cx, cy, s, defused, t) {
+    const pulse = defused ? 0 : 0.5 + 0.5 * Math.sin(t * 5);
+    ctx.save();
+    ctx.translate(cx, cy);
+    const rad = s * (defused ? 0.16 : 0.18 + pulse * 0.03);
+    const glow = ctx.createRadialGradient(0, 0, 1, 0, 0, rad * 2.4);
+    glow.addColorStop(0, defused ? 'rgba(255, 214, 170, 0.9)' : '#fff');
+    glow.addColorStop(0.35, defused ? '#c47b45' : '#ff4d62');
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(0, 0, rad * 2.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = defused ? '#e7a56a' : '#ffd0d6';
+    ctx.lineWidth = Math.max(1.2, s * 0.045);
+    const spikes = 8;
+    for (let i = 0; i < spikes; i++) {
+      const a = (i / spikes) * Math.PI * 2 + (defused ? 0.2 : t * 0.8);
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * rad * 0.45, Math.sin(a) * rad * 0.45);
+      ctx.lineTo(Math.cos(a) * rad * (defused ? 1.15 : 1.45), Math.sin(a) * rad * (defused ? 1.15 : 1.45));
+      ctx.stroke();
+    }
+    ctx.fillStyle = defused ? '#6a3a28' : '#2a0c12';
+    ctx.beginPath();
+    ctx.arc(0, 0, rad * 0.55, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function draw() {
+    const t = performance.now() / 1000;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const bg = ctx.createLinearGradient(0, 0, 0, viewH);
+    bg.addColorStop(0, '#121826');
+    bg.addColorStop(1, '#070910');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, viewW, viewH);
+
+    const lamp = ctx.createRadialGradient(viewW * 0.5, originY + cellSize * size * 0.45, 20, viewW * 0.5, viewH * 0.5, Math.max(viewW, viewH) * 0.55);
+    lamp.addColorStop(0, 'rgba(240, 194, 122, 0.14)');
+    lamp.addColorStop(0.45, 'rgba(80, 120, 150, 0.05)');
+    lamp.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = lamp;
+    ctx.fillRect(0, 0, viewW, viewH);
+
+    ctx.save();
+    if (shake > 0 && motionOK) {
+      const mag = shake * 7;
+      ctx.translate((Math.random() - 0.5) * 2 * mag, (Math.random() - 0.5) * 2 * mag);
+    }
+
+    const gap = Math.max(2, cellSize * 0.08);
+    const rad = Math.max(3, cellSize * 0.16);
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        const cell = cells[r * size + c];
+        const x = originX + c * cellSize + gap * 0.5;
+        const y = originY + r * cellSize + gap * 0.5;
+        const w = cellSize - gap;
+        const h = cellSize - gap;
+        const hot = hover && hover.r === r && hover.c === c;
+        const selected = cursorOn && cursor && cursor.r === r && cursor.c === c;
+        if (!cell.revealed) {
+          const g = ctx.createLinearGradient(x, y, x, y + h);
+          const lift = hot ? 18 : 0;
+          g.addColorStop(0, 'rgb(' + (58 + lift) + ',' + (68 + lift) + ',' + (86 + lift) + ')');
+          g.addColorStop(1, '#161c28');
+          ctx.fillStyle = g;
+          roundRect(x, y, w, h, rad);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(255,255,255,' + (0.05 + 0.02 * Math.sin(t * 1.6 + r * 0.5 + c * 0.35)) + ')';
+          roundRect(x + 1, y + 1, w - 2, h * 0.42, rad);
+          ctx.fill();
+          if (cell.flagged) drawFlag(x + w * 0.5, y + h * 0.52, w);
+        } else {
+          ctx.fillStyle = cell.mine ? '#241018' : '#10151f';
+          roundRect(x, y, w, h, rad);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          if (cell.mine) {
+            drawCharge(x + w * 0.5, y + h * 0.5, w, cell.defused, t);
+            if (cell.wasFlagged) {
+              ctx.fillStyle = '#f0c27a';
+              ctx.font = '700 ' + Math.max(10, w * 0.28) + 'px ' + FONT;
+              ctx.textAlign = 'right';
+              ctx.textBaseline = 'bottom';
+              ctx.fillText('✓', x + w - 3, y + h - 2);
+            }
+          } else if (cell.adj > 0) {
+            const color = NUM_COLORS[cell.adj - 1];
+            ctx.font = '800 ' + Math.floor(w * 0.5) + 'px ' + FONT;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = color;
+            ctx.shadowBlur = motionOK ? 10 : 0;
+            ctx.fillStyle = color;
+            ctx.fillText(String(cell.adj), x + w * 0.5, y + h * 0.52);
+            ctx.shadowBlur = 0;
+          } else {
+            ctx.fillStyle = 'rgba(126, 234, 220, 0.05)';
+            ctx.beginPath();
+            ctx.arc(x + w * 0.5, y + h * 0.5, w * 0.18, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          if (cell.anim > 0) {
+            ctx.fillStyle = 'rgba(255,255,255,' + (cell.anim * 0.28) + ')';
+            roundRect(x, y, w, h, rad);
+            ctx.fill();
+          }
+        }
+        if (hot && !cell.revealed) {
+          ctx.strokeStyle = 'rgba(240, 194, 122, 0.85)';
+          ctx.lineWidth = 2;
+          roundRect(x + 1, y + 1, w - 2, h - 2, rad);
+          ctx.stroke();
+        }
+        if (selected) {
+          ctx.strokeStyle = '#7eeadc';
+          ctx.lineWidth = 2;
+          const m = 3;
+          ctx.beginPath();
+          ctx.moveTo(x + m, y + 10); ctx.lineTo(x + m, y + m); ctx.lineTo(x + 10, y + m);
+          ctx.moveTo(x + w - 10, y + m); ctx.lineTo(x + w - m, y + m); ctx.lineTo(x + w - m, y + 10);
+          ctx.moveTo(x + m, y + h - 10); ctx.lineTo(x + m, y + h - m); ctx.lineTo(x + 10, y + h - m);
+          ctx.moveTo(x + w - 10, y + h - m); ctx.lineTo(x + w - m, y + h - m); ctx.lineTo(x + w - m, y + h - 10);
+          ctx.stroke();
+        }
+        if (hot && cell.revealed && cell.adj > 0 && !cell.mine) {
+          ctx.strokeStyle = 'rgba(126, 234, 220, 0.35)';
+          ctx.lineWidth = 1.5;
+          const list = NEI[r * size + c];
+          for (let n = 0; n < list.length; n++) {
+            const j = list[n];
+            if (cells[j].revealed) continue;
+            const rr = (j / size) | 0;
+            const cc = j % size;
+            const nx = originX + cc * cellSize + gap * 0.5;
+            const ny = originY + rr * cellSize + gap * 0.5;
+            roundRect(nx + 1, ny + 1, w - 2, h - 2, rad);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    for (let i = 0; i < dust.length; i++) {
+      const d = dust[i];
+      ctx.globalAlpha = d.a;
+      ctx.fillStyle = d.color;
+      ctx.fillRect(d.x, d.y, d.s, d.s);
+    }
+    ctx.globalAlpha = 1;
+
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      ctx.globalAlpha = Math.max(0, p.life / p.max);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i < floaters.length; i++) {
+      const f = floaters[i];
+      ctx.globalAlpha = Math.max(0, f.life / f.max);
+      ctx.font = '800 16px ' + FONT;
+      ctx.fillStyle = f.color;
+      ctx.fillText(f.text, f.x, f.y);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    const vig = ctx.createRadialGradient(viewW * 0.5, viewH * 0.5, viewH * 0.3, viewW * 0.5, viewH * 0.5, viewH * 0.72);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(0,0,0,0.35)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, viewW, viewH);
+  }
+
+  function update(dt) {
+    if (phase === 'play' && started) {
+      timeAcc += dt;
+      runTime += dt;
+    } else if (phase === 'clear') {
+      clearLeft -= dt;
+      runTime += dt;
+      if (clearLeft <= 0) nextDepth();
+      if (motionOK && Math.random() < 0.35 && cells.length) {
+        const i = (Math.random() * cells.length) | 0;
+        const pos = cellCenter(i);
+        burst(pos.x, pos.y, Math.random() < 0.5 ? '#f0c27a' : '#7eeadc', 2, 90);
+      }
+    }
+    shake = Math.max(0, shake - dt * 2.4);
+    flash = Math.max(0, flash - dt * 1.6);
+    flashEl.style.opacity = flash.toFixed(3);
+    flashEl.style.background = flashColor;
+    for (let i = 0; i < cells.length; i++) {
+      if (cells[i].anim > 0) cells[i].anim = Math.max(0, cells[i].anim - dt * 2.4);
+    }
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.life -= dt;
+      p.vy += p.g * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+    for (let i = floaters.length - 1; i >= 0; i--) {
+      const f = floaters[i];
+      f.life -= dt;
+      f.y -= 22 * dt;
+      if (f.life <= 0) floaters.splice(i, 1);
+    }
+    for (let i = 0; i < dust.length; i++) {
+      const d = dust[i];
+      d.y -= d.v * dt;
+      d.x += Math.sin(d.y * 0.02 + d.ph) * 8 * dt;
+      if (d.y < -4) {
+        d.y = viewH + 4;
+        d.x = Math.random() * viewW;
+      }
+    }
+  }
+
+  function frame(ts) {
+    if (!lastTs) lastTs = ts;
+    let dt = (ts - lastTs) / 1000;
+    lastTs = ts;
+    if (dt > 0.05) dt = 0.05;
+    if (dt < 0) dt = 0;
+    const w = stage.clientWidth;
+    const h = stage.clientHeight;
+    if (w !== layoutW || h !== layoutH) {
+      layoutW = w;
+      layoutH = h;
+      layout();
+    }
+    if (phase !== 'pause') update(dt);
+    else {
+      flash = Math.max(0, flash - dt);
+      flashEl.style.opacity = flash.toFixed(3);
+    }
+    draw();
+    syncHud();
+    requestAnimationFrame(frame);
+  }
+
+  function bootDust() {
+    dust.length = 0;
+    for (let i = 0; i < 28; i++) {
+      dust.push({
+        x: Math.random() * 800,
+        y: Math.random() * 800,
+        v: 8 + Math.random() * 16,
+        s: 1 + Math.random() * 2,
+        a: 0.08 + Math.random() * 0.2,
+        ph: Math.random() * 6,
+        color: Math.random() < 0.5 ? '#f0c27a' : '#9fd0ff'
+      });
+    }
+  }
+
+  loadStore();
+  bootDust();
+  prepareVein(true);
+  layout();
+  syncHud();
+  setText(menuBestEl, best);
+
+  document.getElementById('playBtn').addEventListener('click', () => { Sfx.ensure(); begin(); });
+  document.getElementById('resumeBtn').addEventListener('click', resume);
+  document.getElementById('pauseRestart').addEventListener('click', () => {
+    phase = 'menu';
+    screenPause.classList.remove('show');
+    begin();
+  });
+  document.getElementById('pauseMenu').addEventListener('click', showMenu);
+  document.getElementById('againBtn').addEventListener('click', begin);
+  document.getElementById('overMenu').addEventListener('click', showMenu);
+  btnPause.addEventListener('click', () => {
+    if (phase === 'play' || phase === 'clear') pause('The quarry waits.');
+    else if (phase === 'pause') resume();
+  });
+  btnMute.addEventListener('click', () => { Sfx.ensure(); toggleMute(); });
+  btnFlag.addEventListener('click', () => {
+    flagMode = !flagMode;
+    hudCache.pack = '';
+    syncHud();
+    Sfx.ui();
+  });
+
+  window.addEventListener('keydown', onKey, true);
+  canvas.addEventListener('pointerdown', onDown);
+  canvas.addEventListener('pointermove', onMove);
+  canvas.addEventListener('pointerup', onUp);
+  canvas.addEventListener('pointercancel', onCancel);
+  canvas.addEventListener('pointerleave', () => { hover = null; });
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  window.addEventListener('pointerdown', () => { lastInteract = performance.now(); }, true);
+  window.addEventListener('blur', () => {
+    if (performance.now() - lastInteract < 450) return;
+    if (phase === 'play' || phase === 'clear') pause('Window unfocused.');
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && (phase === 'play' || phase === 'clear')) pause('Tab hidden.');
+  });
+  window.addEventListener('resize', () => {
+    layoutW = -1;
+    if (phase === 'play' || phase === 'clear') pause('Window resized.');
+  });
+
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
