@@ -33,3 +33,4 @@ Open any file in a browser. Each game is a single HTML document and runs fully o
 | Silverlock | [games/game-006-silverlock.html](games/game-006-silverlock.html) | Adds Silverlock as a single self-contained file at `games/game-006-silverlock.html`. It is a fully offline pipe-lock puzzle: all graphics are canvas-drawn and all sounds are synthesized with the Web Audio API. |
 | Vesper Quill | [games/game-006-vesper-quill.html](games/game-006-vesper-quill.html) | Add Vesper Quill, an offline dusk-dial game |
 | Nectar Putt | [games/game-006-nectar-putt.html](games/game-006-nectar-putt.html) | Add Nectar Putt, an offline miniature golf round |
+| Lumen Quarry | [games/game-006-lumen-quarry.html](games/game-006-lumen-quarry.html) | Adds games/game-006-lumen-quarry.html, a self-contained offline minesweeper. |
